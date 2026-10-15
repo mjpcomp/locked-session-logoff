@@ -1,0 +1,48 @@
+# Created: 2026-10-15 09:45 America/Los_Angeles
+# Path: .github/workflows/native-probe.yml; Owner: maintainers
+# Permissions: contents read; Purpose: package read-only x64/ARM64 diagnostics
+# Arguments: none; Usage: push, pull request, or manual dispatch
+name: Native session diagnostic packages
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        runtime: [win-x64, win-arm64]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Validate project XML
+        shell: pwsh
+        run: |
+          Get-ChildItem -Recurse -Filter *.csproj | ForEach-Object {
+            $null = [xml](Get-Content -LiteralPath $_.FullName -Raw)
+          }
+      - name: Run existing core regression tests
+        run: dotnet run --project tests/LockedSessionLogoff.SelfTests/LockedSessionLogoff.SelfTests.csproj -c Release
+      - name: Publish read-only diagnostic
+        run: dotnet publish src/LockedSessionLogoff.Probe/LockedSessionLogoff.Probe.csproj -c Release -r ${{ matrix.runtime }} --self-contained true -p:PublishTrimmed=false -o artifacts/probe
+      - name: Check native structure layout on x64 runner
+        if: matrix.runtime == 'win-x64'
+        run: ./artifacts/probe/LockedSessionLogoff.Probe.exe --layout-only
+      - name: Copy test guide and calculate checksums
+        shell: pwsh
+        run: |
+          Copy-Item INTEGRATION.md artifacts/probe/INTEGRATION.md
+          Get-ChildItem artifacts/probe -File -Recurse | Sort-Object FullName | ForEach-Object {
+            $hash = Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256
+            $relative = [IO.Path]::GetRelativePath((Resolve-Path artifacts/probe).Path, $_.FullName)
+            '{0}  {1}' -f $hash.Hash, $relative
+          } | Set-Content artifacts/SHA256SUMS.txt
+          Move-Item artifacts/SHA256SUMS.txt artifacts/probe/SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: session-probe-${{ matrix.runtime }}
+          path: artifacts/probe/
+          if-no-files-found: error
+# No installer/service/enforcement. ARM64 is built, not run on this x64 host.

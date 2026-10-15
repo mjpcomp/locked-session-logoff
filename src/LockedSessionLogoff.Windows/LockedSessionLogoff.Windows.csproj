@@ -1,0 +1,9 @@
+<!-- Created: 2026-10-15 09:45 America/Los_Angeles; Path: src/LockedSessionLogoff.Windows/LockedSessionLogoff.Windows.csproj; Owner: maintainers; Permissions: public read/maintainer write; Purpose: Windows session interop; Arguments: standard build options; Usage: build or reference from Windows projects -->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+</Project>
