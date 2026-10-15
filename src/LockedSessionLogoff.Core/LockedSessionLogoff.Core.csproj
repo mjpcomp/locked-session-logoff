@@ -1,0 +1,9 @@
+<!-- Created: 2026-10-14 17:44 America/Los_Angeles; Path: src/LockedSessionLogoff.Core/LockedSessionLogoff.Core.csproj; Owner: maintainers; Permissions: public read/maintainer write; Purpose: shared timer library; Arguments: standard dotnet build options; Usage: dotnet build this project -->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+</Project>

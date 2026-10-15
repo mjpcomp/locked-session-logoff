@@ -1,0 +1,31 @@
+# Created: 2026-10-14 17:44 America/Los_Angeles
+# Path: .github/workflows/foundation.yml; Owner: maintainers
+# Permissions: repository contents read; Purpose: foundation compilation and self-tests
+# Arguments: none; Usage: push, pull request, or manual workflow dispatch
+name: Foundation build and self-tests
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  self-tests:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Run deterministic self-tests on hosted x64 Windows
+        run: dotnet run --project tests/LockedSessionLogoff.SelfTests/LockedSessionLogoff.SelfTests.csproj -c Release
+  architecture-build:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        runtime: [win-x64, win-arm64]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Compile foundation for target runtime
+        run: dotnet build tests/LockedSessionLogoff.SelfTests/LockedSessionLogoff.SelfTests.csproj -c Release -r ${{ matrix.runtime }}
+# No installable artifacts yet. ARM64 compilation is not ARM64 runtime validation.

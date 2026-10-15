@@ -1,86 +1,73 @@
-<!-- Created: 2026-10-14 17:36 America/Los_Angeles | Repository: mjpcomp/locked-session-logoff | Path: /README.md | Owner: repository maintainers | Permissions: public read, authorized maintainer write | Purpose: authoritative project scope and operating guide | Arguments: none | Usage: read before implementation; update with verified behavior -->
+<!-- Created: 2026-10-14 17:36; Updated: 2026-10-14 17:44 America/Los_Angeles | Repository: mjpcomp/locked-session-logoff | Path: /README.md | Owner: maintainers | Permissions: public read/maintainer write | Purpose: authoritative scope and operating guide | Arguments: none | Usage: read with TASKS.md before changes -->
 # Locked Session Logoff
 
-A planned Windows service and administrator utility for locked-session logoff, local-profile maintenance, and scheduled restart/shutdown management. Organization-neutral; no domain, Intune, or cloud management dependency is intended.
+Organization-neutral Windows service and administrator utility project for locked-session logoff, local-profile maintenance, and scheduled restart/shutdown. No domain, Intune, or cloud-management dependency is intended.
 
-## Status and source of truth
+## Current status
 
-Planning/documentation only. No application, installer, tests, executable, or build workflow exists yet. Features below are requirements, not claims of implemented or tested functionality. README.md defines scope and safety requirements; TASKS.md tracks implementation, verification, blockers, and next steps. Update both when behavior or status changes.
+First foundation increment: side-effect-free C# timer library, deterministic executable self-tests, and a GitHub Actions workflow. No Windows service, administrator UI, native session adapter, installer, logoff execution, profile deletion, or maintenance task implementation exists yet. No installable release exists. Compilation and test results must be checked after the commit; source presence is not test evidence. TASKS.md is the durable checkpoint.
 
-## Goals and components
+Initial targets: Windows 11 x64 and Windows 11 ARM64, .NET 10 LTS. ARM64 compilation and ARM64 device testing are separate milestones. No Windows 10 or 32-bit target is planned initially. Planned release packages are self-contained and architecture-specific.
 
-- LockedSessionLogoff.Service.exe: privileged Windows service monitoring actual session lock state and logging off only eligible sessions.
-- LockedSessionLogoff.Admin.exe: elevated administrator interface controlling configuration, profiles, cleanup policy, maintenance tasks, diagnostics, and uninstall preview.
-- Install.ps1 and Uninstall.ps1: documented administrator-run installation/removal.
-- Administrator-protected configuration, local logs, and a durable change ledger.
-- C#/.NET implementation and self-contained Windows build package through GitHub Actions; initial architecture target and supported OS versions must be established and tested before release.
+## Foundation developer commands
 
-Installation installs components only. Monitoring remains disabled until explicitly enabled in the administrator utility. Installation must not enable profile cleanup or create restart/shutdown schedules. No telemetry or automatic uploading of configuration, logs, profile names, SIDs, or machine information.
+With the .NET 10 SDK, from the repository root:
 
-## Locked-session logoff
+```powershell
+dotnet run --project tests/LockedSessionLogoff.SelfTests/LockedSessionLogoff.SelfTests.csproj -c Release
+dotnet build tests/LockedSessionLogoff.SelfTests/LockedSessionLogoff.SelfTests.csproj -c Release -r win-x64
+dotnet build tests/LockedSessionLogoff.SelfTests/LockedSessionLogoff.SelfTests.csproj -c Release -r win-arm64
+```
 
-Use actual Windows session lock/unlock notifications and state verification, not keyboard/mouse inactivity alone. Maintain independent timers per session. Unlock cancels/resets timing; a later lock starts a fresh interval. Recheck the specific session immediately before logoff. Handle notification/query races conservatively and document the unavoidable boundary around a logoff request. Unknown state or query failure must not cause logoff; reset timing conservatively and log the problem.
+These run synthetic tests/builds, not a session watcher. The self-test executable has no privileged or destructive actions. It is not a dotnet test framework project. CI currently publishes no downloadable application.
 
-If monitoring starts while a session is already locked, count from the first positive observation, not an assumed earlier lock time. Use monotonic elapsed timing and define/test sleep, hibernation, disconnect, reconnect, service restart, and session-ID reuse behavior. Lock and disconnection are not interchangeable.
+## Intended components and safe defaults
 
-Proposed default timeout: 60 minutes after explicit enablement. Support explicit account/SID exclusions, without automatically exempting every administrator. Forced logoff may discard unsaved work; require a clear warning when enabling enforcement.
+- LockedSessionLogoff.Service.exe: privileged session monitoring/logoff.
+- LockedSessionLogoff.Admin.exe: elevated configuration, profile management, task management, diagnostics, and uninstall preview.
+- Install.ps1 / Uninstall.ps1: administrator-run deployment/removal with recovery.
+- Protected configuration, bounded local logs, and a transactional original-state ledger.
 
-### Runtime diagnostics, not separate builds
+Installation only installs; monitoring stays disabled until enabled through the admin utility. Profile cleanup and restart/shutdown tasks require separate opt-in. No telemetry or automatic uploads of logs, profile names/SIDs, configuration, or machine information.
 
-The first executable must support both real enforcement and report-only operation without recompilation. DryRun prevents application-initiated destructive actions; Debug increases diagnostic verbosity. Their configuration and any command-line overrides must have documented precedence and administrator-controlled persistence. Proposed flags are --dry-run and --debug; these are not available commands yet. Normal enforcement is available in the same build.
+## Locked-session requirements
 
-Dry-run cannot suppress Windows cleanup policies or scheduled tasks that already exist. Explain this boundary prominently. Do not imply that toggling dry-run reverses external configuration.
+Actual Windows lock/unlock events and state verification, not generic inactivity. Independent per-session timers; unlock resets; relock starts fresh. Recheck identity/state immediately before action. Unknown state/query failure resets timing and blocks logoff. Starting during a lock counts only from first observed lock. Track stable logon identity, not session ID alone. Define and test sleep/hibernate/disconnect/reconnect semantics; disconnection is not lock.
 
-## Profile retention policy
+Use monotonic timing and serialized observations. The current core accepts monotonic elapsed values from a future adapter; it does not query Windows or prove uninterrupted state between polls. Native notifications and race handling remain required. Core decisions are candidates only, never permission to bypass the final recheck. Reset on configuration changes conservatively. Repeated candidates require adapter-level bounded logging/retry handling.
 
-Prefer configuring Windows' existing restart-based stale-profile policy rather than introducing another unattended deletion engine. The admin utility must show effective settings, preview changes, apply/remove the relevant value explicitly, and preserve original state.
+Proposed timeout: 60 minutes. Explicit account/SID exclusions, not automatic exemption of all admins. Same build supports enforcement and runtime DryRun; independent Debug controls verbosity. Proposed --dry-run/--debug flags and persistence/precedence are not implemented yet. Dry-run suppresses our destructive actions, not external policies/tasks already installed. Enabling forced logoff requires an unsaved-work warning.
 
-Local Group Policy location:
+## Profile retention
 
-Computer Configuration > Administrative Templates > System > User Profiles > Delete user profiles older than a specified number of days on system restart.
+Configure native restart-based stale-profile policy; do not create a competing unattended deletion engine. Display current settings, preview/apply/remove, preserve original state, and provide exact copyable commands. Verify registry value/type/range/OS applicability before implementing.
 
-Verify the exact registry path, value name/type, range, and OS applicability against authoritative documentation/ADMX before generating commands. Explain that direct registry configuration does not edit the Local Group Policy database and can be overwritten by policy refresh or another management system. Application exclusions do not become exclusions from Windows' built-in cleanup policy.
+Group Policy: Computer Configuration > Administrative Templates > System > User Profiles > Delete user profiles older than a specified number of days on system restart.
 
-Show copyable, fully resolved commands as an alternative to applying changes. Clarify that retention refers to unused profiles and that deleting a local profile removes local files/settings, not the cloud identity. Shutdown must not be represented as equivalent to restart for this policy.
+Direct registry configuration is not editing the Local Group Policy database and can be overwritten by policy refresh. App exclusions do not exempt profiles from the native policy. Retention means unused days; shutdown is not represented as equivalent to restart. Deleting a local profile does not delete its cloud identity.
 
 ## Interactive profile management
 
-Display account name when resolvable, SID, profile path, reported last-use time, age, loaded status, special/system status, exclusions, and eligibility reasons. Unknown names/dates must remain explicitly unknown. Optional size scans run on demand and handle permissions/reparse points safely.
+Show account when resolvable, SID, path, reported last use/age, loaded/special status, exclusions, and eligibility reasons. Unknown values remain unknown; unknown dates are excluded from age selection. Optional size scans run on demand and safely handle permissions/reparse points.
 
-Use Windows profile-management mechanisms, not raw recursive directory deletion. Block loaded, special/system, current operator, and excluded profiles. Re-query immediately before deletion, handle races/failures, and require confirmation of the exact selected profiles. Unknown last-use dates are excluded from automatic age selection. Log outcomes individually. Do not call whole-profile deletion cache clearing. Generic AppData wiping is out of scope.
+Delete through Windows profile management, never raw folder deletion. Block loaded/special/system/current-operator/excluded profiles; re-query before action, confirm exact selections, handle races, and log each result. Whole-profile deletion removes local files/settings, not just caches. Generic AppData wiping is out of scope.
 
-## Scheduled restart/shutdown
+## Maintenance task management
 
-Admin utility can preview, create, inspect, update, and remove its own named daily maintenance task. Options: restart or shutdown, local time, warning/countdown, wake from sleep, and explicit forced-close/data-loss acknowledgement. Show next run, last run, and last result. Do not catch up missed runs by default. Test daylight-saving and clock-change behavior. A shutdown countdown greater than zero implicitly forces application closure; explain this accurately.
+Preview/create/inspect/update/remove an owned daily SYSTEM task. Restart or shutdown, local time, warning/countdown, wake option, next/last run and result. Skip missed runs by default; test DST/clock changes. A positive shutdown countdown implies forced app closure; show the data-loss warning. Refuse silent collisions with unrelated tasks. If replacement is supported, require explicit approval and original XML backup/restore. Provide equivalent commands and Task Scheduler instructions.
 
-Use a suitable SYSTEM task principal. Refuse silent overwrite of existing unrelated tasks. If replacement is explicitly supported, require backup and a clear restore decision. Provide equivalent PowerShell commands and Task Scheduler instructions.
+## Uninstall and reversal
 
-## Installation and intended operating sequence
+Persist original absent/existing value/type/data before first edit, preserve the baseline across repeated edits, and record last-written state transactionally. Protect privileged binaries/configuration/ledger from standard-user changes. Validate privileged requests.
 
-No executable or installation commands are available yet. Do not run placeholder commands as if implemented. Intended sequence:
+Preview every stop/remove/restore/retain/conflict. Stop enforcement first; remove service, owned tasks, installed files/configuration. Restore original policy values or remove only values originally absent, never unrelated keys. Detect later third-party edits and ask rather than overwrite silently. Offer log export/retention. On partial failure, retain protected recovery records, return failure, and provide retry instructions; define unattended behavior. Upgrades must preserve original baselines.
 
-1. Download a verified build artifact and inspect checksums/signing status.
-2. Install as administrator; monitoring and optional maintenance remain disabled.
-3. Open the elevated admin utility, review defaults/exclusions, and enable dry-run monitoring.
-4. Test lock/unlock, relock, multiple sessions, failures, and timeout behavior.
-5. Explicitly enable enforcement after reviewing unsaved-work warnings.
-6. Independently opt into profile retention and/or a daily maintenance task.
-7. Use uninstall preview before removal.
+Uninstall cannot recover deleted profiles or unsaved work. It reverses configuration, not completed destructive actions. Installation/removal commands will be documented only when implemented.
 
-A successful compilation is not Windows integration validation. Unsigned builds must be labeled unsigned. No signing keys, credentials, private logs, organization-specific details, or tenant identifiers belong in source/build artifacts. Include checksums, dependency/license review, and an explicit license decision before release.
+## Build, release, and continuity
 
-## Reversible changes and uninstall
+GitHub Actions compiles foundation targets and runs synthetic x64 self-tests. Future self-contained service/admin packages need checksums and accurate signing labels; unsigned is not signed. Build success is not workstation validation. Select a license with maintainer approval before release; review dependencies. Never publish credentials, signing keys, customer/tenant details, or private logs.
 
-Persist original state before the first modification and record each successful change transactionally. Preserve whether a value was absent, its type/data, original task definitions if replacement was authorized, and the last value written by this utility. Repeated edits must not replace the original baseline. Protect executable/configuration/ledger locations from standard-user modification and service privilege escalation.
+Read README.md and TASKS.md before each increment. Record changed paths, timestamps, purpose, ownership/permissions, arguments/usage, evidence, blockers, and next step. Add headers where formats permit; document non-comment formats in tracking records.
 
-Before uninstall, show exactly what will be stopped, removed, restored, retained, or unresolved. Stop enforcement first. Remove the service, application-owned tasks, installed files, and application-owned configuration. Restore prior policy values, removing only values originally absent; do not delete unrelated registry keys.
-
-Compare current state with the utility's last-written state. If another administrator changed it, flag a conflict and request a decision rather than overwriting silently. Offer log export. Remove logs/state after successful restoration unless explicitly retained. On partial failure, retain protected recovery information and return a non-success result with recovery instructions. Support repeat/recovery runs and define safe unattended-uninstall behavior.
-
-Uninstall cannot recover deleted profiles or unsaved work lost through logoff/restart/shutdown. It restores configuration, not completed destructive actions.
-
-## Contributor continuity and connector reads
-
-Read README.md and TASKS.md before changes; distinguish planned, implemented, built, and Windows-tested states. Record dates, tests, failures, blockers, and the next step. Files/scripts must include creation/update timestamp, location, purpose, owner/permissions, arguments, and usage where the format allows comments; document non-comment formats in the tracking records.
-
-Known connector workaround: file-read operations may return success and a blob SHA while omitting decoded content. Use a commit diff or pull-request diff to obtain text. A SHA is not file content. Diffs are contextual changes, not necessarily complete current files: reconstruct from a known baseline or request the full file from the maintainer when necessary. Never overwrite unknown content based on metadata alone. Keep private support correspondence out of this public repository.
+Connector workaround: if a file read returns only blob metadata, use commit/PR diffs. A SHA is not content. Reconstruct complete files only from a known baseline or obtain full text; do not overwrite unknown content or loop metadata-only reads. Never publish private support correspondence.
