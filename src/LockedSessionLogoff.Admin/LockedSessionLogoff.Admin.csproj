@@ -1,0 +1,16 @@
+<!-- Created: 2026-10-15 10:46 America/Los_Angeles; Path: src/LockedSessionLogoff.Admin/LockedSessionLogoff.Admin.csproj; Owner: maintainers; Permissions: public read/maintainer write; Purpose: elevated WinForms editor; Arguments: none; Usage: publish for native Windows architecture -->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../LockedSessionLogoff.Windows/LockedSessionLogoff.Windows.csproj" />
+    <PackageReference Include="System.ServiceProcess.ServiceController" Version="10.0.0" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Created: 2026-10-15 10:46 America/Los_Angeles; Path: src/LockedSessionLogoff.Admin/app.manifest; Owner: maintainers; Permissions: public read/maintainer write; Purpose: require elevation; Arguments: none; Usage: embedded at build -->
+<assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1">
+  <assemblyIdentity version="0.1.0.0" name="LockedSessionLogoff.Admin" />
+  <trustInfo xmlns="urn:schemas-microsoft-com:asm.v3">
+    <security>
+      <requestedPrivileges>
+        <requestedExecutionLevel level="requireAdministrator" uiAccess="false" />
+      </requestedPrivileges>
+    </security>
+  </trustInfo>
+</assembly>
