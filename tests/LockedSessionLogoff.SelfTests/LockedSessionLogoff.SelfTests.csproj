@@ -1,4 +1,4 @@
-<!-- Created: 2026-10-14 17:44 America/Los_Angeles; Path: tests/LockedSessionLogoff.SelfTests/LockedSessionLogoff.SelfTests.csproj; Owner: maintainers; Permissions: public read/maintainer write; Purpose: dependency-free executable regression tests; Arguments: standard dotnet run options; Usage: dotnet run --project this project -->
+<!-- Created: 2026-10-14 17:44; Updated: 2026-10-14 17:53 America/Los_Angeles; Path: tests/LockedSessionLogoff.SelfTests/LockedSessionLogoff.SelfTests.csproj; Owner: maintainers; Permissions: public read/maintainer write; Purpose: dependency-free executable regression tests; Arguments: standard dotnet run options; Usage: run from repository root using the command documented in README.md -->
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
