@@ -1,0 +1,43 @@
+# Created: 2026-10-15 11:01 America/Los_Angeles
+# Path: .github/workflows/config-observer.yml; Owner: maintainers
+# Permissions: contents read; Purpose: test/configured-observer packages
+# Arguments: none; Usage: push/PR/manual dispatch
+name: Configured observer integration
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        runtime: [win-x64, win-arm64]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: XML validation
+        shell: pwsh
+        run: Get-ChildItem -Recurse -Filter *.csproj | ForEach-Object { $null = [xml](Get-Content -LiteralPath $_.FullName -Raw) }
+      - name: Core tests on x64 host
+        run: dotnet run --project tests/LockedSessionLogoff.SelfTests/LockedSessionLogoff.SelfTests.csproj -c Release
+      - name: Configuration tests on x64 host
+        run: dotnet run --project tests/LockedSessionLogoff.ConfigurationTests/LockedSessionLogoff.ConfigurationTests.csproj -c Release
+      - name: Publish configured observer
+        run: dotnet publish src/LockedSessionLogoff.ConfigObserver/LockedSessionLogoff.ConfigObserver.csproj -c Release -r ${{ matrix.runtime }} --self-contained true -p:PublishTrimmed=false -o artifacts/observer
+      - name: Guide and checksums
+        shell: pwsh
+        run: |
+          Copy-Item CONFIG-INTEGRATION.md artifacts/observer/CONFIG-INTEGRATION.md
+          Get-ChildItem artifacts/observer -File -Recurse | Sort-Object FullName | ForEach-Object {
+            $hash = Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256
+            '{0}  {1}' -f $hash.Hash, [IO.Path]::GetRelativePath((Resolve-Path artifacts/observer).Path, $_.FullName)
+          } | Set-Content artifacts/SHA256SUMS.txt
+          Move-Item artifacts/SHA256SUMS.txt artifacts/observer/SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: configured-observer-${{ matrix.runtime }}
+          path: artifacts/observer/
+          if-no-files-found: error
+# Tests are synthetic/no registry writes. ARM64 is cross-published, not device-tested.
