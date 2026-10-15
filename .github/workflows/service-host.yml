@@ -1,0 +1,43 @@
+# Created: 2026-10-15 09:55 America/Los_Angeles
+# Path: .github/workflows/service-host.yml; Owner: maintainers
+# Permissions: contents read; Purpose: build safe service-host diagnostics
+# Arguments: none; Usage: push/PR/manual dispatch
+name: Service host diagnostics
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        runtime: [win-x64, win-arm64]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Validate XML
+        shell: pwsh
+        run: Get-ChildItem -Recurse -Filter *.csproj | ForEach-Object { $null = [xml](Get-Content -LiteralPath $_.FullName -Raw) }
+      - name: Core regression tests
+        run: dotnet run --project tests/LockedSessionLogoff.SelfTests/LockedSessionLogoff.SelfTests.csproj -c Release
+      - name: Publish host
+        run: dotnet publish src/LockedSessionLogoff.Service/LockedSessionLogoff.Service.csproj -c Release -r ${{ matrix.runtime }} --self-contained true -p:PublishTrimmed=false -o artifacts/host
+      - name: x64 self-check without SCM installation
+        if: matrix.runtime == 'win-x64'
+        run: ./artifacts/host/LockedSessionLogoff.Service.exe --self-check
+      - name: Guide and checksums
+        shell: pwsh
+        run: |
+          Copy-Item SERVICE.md artifacts/host/SERVICE.md
+          Get-ChildItem artifacts/host -File -Recurse | Sort-Object FullName | ForEach-Object {
+            $hash = Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256
+            '{0}  {1}' -f $hash.Hash, [IO.Path]::GetRelativePath((Resolve-Path artifacts/host).Path, $_.FullName)
+          } | Set-Content artifacts/SHA256SUMS.txt
+          Move-Item artifacts/SHA256SUMS.txt artifacts/host/SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: service-host-${{ matrix.runtime }}
+          path: artifacts/host/
+          if-no-files-found: error

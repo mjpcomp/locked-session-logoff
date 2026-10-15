@@ -1,14 +1,26 @@
-// Created: 2026-10-15 09:45 America/Los_Angeles
+// Created: 2026-10-15 09:45; Updated: 2026-10-15 09:55 America/Los_Angeles
 // Path: src/LockedSessionLogoff.Windows/SessionReader.cs; Owner: maintainers
-// Permissions: public read/maintainer write; Purpose: read-only local WTS session snapshots
-// Arguments: ReadAll takes none; Usage: call from Windows process; failures are explicit
+// Permissions: public read/maintainer write; Purpose: read-only local WTS snapshots
+// Arguments: ReadAll takes none; Usage: Windows callers; errors remain explicit
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 
 namespace LockedSessionLogoff.Windows;
 
 public sealed record SessionSnapshot(int Id, string Station, int ConnectionState,
-    string Account, string LockState, long LogonFileTime, string Identity, string? Error);
+    string Account, string LockState, long LogonFileTime, string Identity, string? Error)
+{
+    public string ConnectionStateName => ConnectionState switch
+    {
+        0 => "Active", 1 => "Connected", 2 => "ConnectQuery", 3 => "Shadow",
+        4 => "Disconnected", 5 => "Idle", 6 => "Listen", 7 => "Reset",
+        8 => "Down", 9 => "Init", _ => "Unknown"
+    };
+    public string Kind => Id == 0 ? "Services" : ConnectionState == 6 ? "Listener"
+        : string.IsNullOrEmpty(Account) ? "NoUserOrUnknown" : "User";
+    public bool CanObserveTimer => Id > 0 && ConnectionState == 0 && Error is null
+        && !string.IsNullOrEmpty(Identity) && (LockState is "Locked" or "Unlocked");
+}
 
 public static class SessionReader
 {
@@ -27,6 +39,11 @@ public static class SessionReader
             {
                 var info = Marshal.PtrToStructure<SessionInfo>(IntPtr.Add(buffer, checked(i * stride)));
                 var station = Marshal.PtrToStringUni(info.Station) ?? string.Empty;
+                if (info.Id == 0 || info.State == 6)
+                {
+                    result.Add(new(info.Id, station, info.State, string.Empty, "NotApplicable", 0, string.Empty, null));
+                    continue;
+                }
                 result.Add(ReadOne(info, station));
             }
             return result;
@@ -74,7 +91,6 @@ public static class SessionReader
 #pragma warning disable CS0649
     [StructLayout(LayoutKind.Sequential)]
     private struct SessionInfo { public int Id; public IntPtr Station; public int State; }
-
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
     private struct LevelOne
     {
@@ -96,21 +112,15 @@ public static class SessionReader
         public uint IncomingCompressedBytes;
         public uint OutgoingCompressedBytes;
     }
-
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
     private struct InfoEx { public uint Level; public LevelOne Data; }
 #pragma warning restore CS0649
-
     [DllImport("wtsapi32.dll", ExactSpelling = true, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool WTSEnumerateSessionsW(IntPtr server, int reserved, int version,
-        out IntPtr sessions, out int count);
-
+    private static extern bool WTSEnumerateSessionsW(IntPtr server, int reserved, int version, out IntPtr sessions, out int count);
     [DllImport("wtsapi32.dll", ExactSpelling = true, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool WTSQuerySessionInformationW(IntPtr server, int sessionId, int infoClass,
-        out IntPtr data, out int bytes);
-
+    private static extern bool WTSQuerySessionInformationW(IntPtr server, int sessionId, int infoClass, out IntPtr data, out int bytes);
     [DllImport("wtsapi32.dll", ExactSpelling = true)]
     private static extern void WTSFreeMemory(IntPtr memory);
 }
