@@ -1,49 +1,44 @@
-<!-- Updated: 2026-10-15 12:13 America/Los_Angeles | Path: /TASKS.md | Owner: maintainers | Permissions: public read/maintainer write | Purpose: authoritative current checkpoint | Arguments: none | Usage: checked means specifically evidenced; read linked guides -->
+<!-- Updated: 2026-10-15 13:13 America/Los_Angeles | Path: /TASKS.md | Owner: maintainers | Permissions: public read/maintainer write | Purpose: authoritative checkpoint and next validation gates | Arguments: none | Usage: distinguish source/CI/synthetic/device evidence -->
 # Current implementation tracker
 
-## Latest increment
+## Prior round complete: SID-aware workstation dry-run lifecycle
 
-SID-aware service/live-opt-in source and new events GUI prepared. See [SERVICE-INTEGRATION.md](SERVICE-INTEGRATION.md) for actual capabilities, safety boundaries, tests and removal. New build/device results are pending. Public edits install nothing remotely. No branded repository or identifiers renamed.
+See [sanitized checkpoint](VALIDATION-386df4b.md). Supplied evidence establishes clean install, GUI-verified reports, dry-run lock timeout/unlock, SID exclusion and removal restoring eligibility, restart OFF/ON activation gate, disable, Copy/Export, remove-settings inactive behavior, and uninstall with service/files/recovery/runtime absent and baseline restored. Exact artifact hash was not independently inspected. User is uninstalled. Live logoff was not tested or requested to finish this round.
 
-## Prior evidence (old package, not new feature validation)
+Earlier foundation, console and configuration evidence remains in [VALIDATION.md](VALIDATION.md). These records are scoped observations, not broad production readiness or an independent CI audit.
 
-- [x] 14 core synthetic tests from supplied logs; later builds maintainer-reported green.
-- [x] ARM64 foundation/build compilation reported, no device validation.
-- [x] x64 probe and console lock/unlock/dry-run timing.
-- [x] GUI save/reopen persistence.
-- [x] Configured console debug reload, enable/20-second threshold, timeout reload, disable.
-- [x] Installed 299e347 service received lock/unlock notifications and emitted WouldLogOff, with enable/disable reflected.
-- [x] Previewed uninstall and owned service/files/recovery/runtime removal; original preexisting configuration restored exactly, supplied verification output.
-- [ ] GUI report-verification checks independently exercised (prior service evidence was also read through PowerShell).
+## New increment: source present, build/device results pending
 
-## New code present, validation pending
+- Bounded retained diagnostics in existing protected StatusV1; up to 128 entries/32 KiB serialized history with Run IDs and start/normal-stop markers.
+- Current-run snapshots remain 24 entries. Retained history is best-effort diagnostics, not a transaction/tamper-evident audit ledger.
+- Friendly no-settings state, inactive timeout and explicit absent revision comparison; clearer remove-settings warning.
+- GUI retained history Copy/Export; historical versus current state clearly distinguished.
+- Pure diagnostics tests plus x64 disabled service restart/history/uninstall smoke.
+- No live authorization/defaults, timer logic, SID policy, installer ownership locations or networking changes.
 
-- Token SID/session/authentication LUID reader with safe handle disposal and layout checks.
-- Actual SID exclusions and rechecked candidate eligibility.
-- Explicit default-off live permit, immutable backend capability gate and native request behind checks.
-- Separate rolling Recent Service Events plus local Copy/Export.
-- 17 new synthetic eligibility/permission tests and updated integrated packaging/smoke.
+## Next targeted validation
 
-## Immediate gate
+1. New CI, tests and x64 restart-persistence smoke must pass.
+2. Clean native install; monitoring stays OFF, Allow LIVE unchecked.
+3. Verify retained history survives service restart, new Run ID and inactive timeout.
+4. Remove settings and verify friendly inactive/absent-revision presentation.
+5. Copy/Export cross-run history, then uninstall and verify original baseline and owned runtime/history removal.
 
-Verify new CI first. Clean install native package (no overwrite upgrade), verify disabled state. Test SYSTEM token queries, dry-run, actual SID exclusion, configuration/state changes and GUI events. Only then optional live test in an authorized safe test session with work saved and explicit consent. Do not infer live success from native request acceptance or synthetic tests. Record each result separately.
+Do not repeat every already-passed ordinary SID dry-run scenario just to validate diagnostics. No live test requested this round. New behavior remains pending until results supplied.
 
 ## Remaining scope
 
-- [ ] New CI, x64 native identity/exclusion/live device results and lifecycle restoration.
-- [ ] Full session reuse/multiple users/unlock timing races/error/config/ACL/concurrency adversarial tests.
-- [ ] Logoff outcome reconciliation, warning/countdown UX, stronger persistent diagnostics/audit and transactional ledger.
-- [ ] Interrupted installation/removal, retry/recovery, upgrade support, reparse/race hardening.
-- [ ] Idle-lock helper, authenticated IPC, supervision, suspend/reconnect semantics.
-- [ ] Profile inventory/guarded deletion/native retention-policy controls and reversal.
-- [ ] Owned restart/shutdown scheduling, DST/missed-run/collision/reversal tests.
-- [ ] Ubuntu/Laravel central reporting, auth/scoped groups/roles, privacy, retention and API.
-- [ ] Later remote typed commands, replay/expiry/revocation, scheduling and approvals.
-- [ ] ARM64 device tests, license/dependency/signing review and release gates.
-- [ ] Naming/brand checks and clean branded-repo handoff; then separately approve old working repo privacy.
+- Diagnostics device validation; corruption/retention/registry failures and power-loss behavior.
+- Live logoff safe-account validation, completion reconciliation and warning/countdown UX.
+- Full token/session reuse, multiple users, unlock/config/ACL/concurrency adversarial tests.
+- Transactional audit/outcome ledger; full interruption/retry/recovery/upgrade/reparse hardening.
+- Idle-lock helper/authenticated IPC/supervision and suspend/reconnect semantics.
+- Profile inventory/guarded deletion/native retention policy and baseline restoration.
+- Owned restart/shutdown scheduling, DST/missed-run/collision/reversal tests.
+- Ubuntu/Laravel central reporting/auth/scoped groups/roles/privacy/retention/API; later typed remote commands with replay/expiry/revocation/approval, never arbitrary shell execution.
+- ARM64 device tests, licensing/dependency/signing/release gates.
+- Brand/name checks, clean branded-repository handoff, then separately approve old working repository privacy.
 
-## Continuity
+## Continuity/security
 
-[Validation](VALIDATION.md), [current installed guide](SERVICE-INTEGRATION.md), [server/admin security](SERVER-PLAN.md), [branding](BRANDING.md), [idle-lock](IDLE-LOCK.md). README and older incremental guides contain historical implementation descriptions; current guide and this checkpoint govern this bundle.
-
-Use commit/PR diffs for missing decoded reads; never use SHA metadata as content. Preserve timestamps/path/owner/permissions/purpose/arguments/usage in records. Keep source/built/synthetic-tested/device-tested distinct. No organization/user/machine identifiers in public records. Reporting and maintenance stay disabled/unimplemented. Live logoff defaults OFF and requires explicit new configuration; no arbitrary command execution or network listener introduced.
+Current [package guide](SERVICE-INTEGRATION.md), [server plan](SERVER-PLAN.md), [branding](BRANDING.md), [idle-lock](IDLE-LOCK.md). Older README/incremental guides are historical; this checkpoint/current package guide govern the bundle. Use decoded file contents/commit patches, not SHA metadata as content. Preserve date/path/owner/permissions/purpose/arguments/usage in records. No public organization/user/machine identifiers. Keep live permit OFF by default; reporting/maintenance unimplemented. Public source writes install nothing remotely.

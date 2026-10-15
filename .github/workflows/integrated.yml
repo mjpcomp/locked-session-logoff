@@ -1,7 +1,7 @@
-# Updated: 2026-10-15 12:13 America/Los_Angeles
+# Updated: 2026-10-15 13:13 America/Los_Angeles
 # Path: .github/workflows/integrated.yml; Owner: maintainers
-# Permissions: contents read; Purpose: SID-aware bundle, synthetic gates, isolated install test
-# Arguments: none; Usage: push/PR/manual dispatch
+# Permissions: contents read; Purpose: diagnostics tests, disabled restart persistence and lifecycle smoke
+# Arguments: none; Usage: push/PR/manual dispatch; never enables live actions
 name: Integrated service test bundle
 on: [push, pull_request, workflow_dispatch]
 permissions:
@@ -28,6 +28,8 @@ jobs:
         run: dotnet run --project tests/LockedSessionLogoff.ConfigurationTests -c Release
       - name: Identity/eligibility tests (no real actions)
         run: dotnet run --project tests/LockedSessionLogoff.EligibilityTests -c Release
+      - name: Diagnostics tests (no external state)
+        run: dotnet run --project tests/LockedSessionLogoff.DiagnosticsTests -c Release
       - name: Publish service and GUI
         shell: pwsh
         run: |
@@ -38,7 +40,7 @@ jobs:
           Copy-Item packaging/*.ps1 artifacts/package/
           Copy-Item SERVICE-INTEGRATION.md artifacts/package/
           @{Runtime='${{ matrix.runtime }}';Commit='${{ github.sha }}'} | ConvertTo-Json | Set-Content artifacts/package/package.json
-      - name: x64 layout and isolated disabled-install/uninstall smoke test
+      - name: x64 disabled install/restart/history/uninstall smoke test
         if: matrix.runtime == 'win-x64'
         shell: pwsh
         run: |
@@ -51,7 +53,15 @@ jobs:
             $r=(Get-ItemProperty 'HKLM:\SOFTWARE\LockedSessionLogoff.Runtime').StatusV1 | ConvertFrom-Json
             $c=(Get-ItemProperty 'HKLM:\SOFTWARE\LockedSessionLogoff').ConfigurationV1 | ConvertFrom-Json
             if($r.Configuration.Enabled -ne $false -or $c.AllowLiveLogoff -eq $true){throw 'Installation activated monitoring/live permit'}
+            if(@($r.RetainedEvents).Count -lt 1){throw 'No retained diagnostics'}
+            $oldRun=$r.RunId
+            Restart-Service LockedSessionLogoff
+            Start-Sleep -Seconds 5
+            $r=(Get-ItemProperty 'HKLM:\SOFTWARE\LockedSessionLogoff.Runtime').StatusV1 | ConvertFrom-Json
+            if($r.RunId -eq $oldRun -or $r.Configuration.Enabled -ne $false){throw 'Restart identity/disabled state incorrect'}
+            if(@($r.RetainedEvents | Where-Object RunId -eq $oldRun).Count -lt 1){throw 'Prior run diagnostics lost'}
           } finally { & ./artifacts/package/Uninstall.ps1 -Confirm:$false }
+          if(Test-Path 'HKLM:\SOFTWARE\LockedSessionLogoff.Runtime'){throw 'Owned runtime/history remains'}
       - name: Checksums
         shell: pwsh
         run: |
