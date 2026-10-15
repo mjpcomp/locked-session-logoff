@@ -1,0 +1,65 @@
+# Created: 2026-10-15 11:21 America/Los_Angeles
+# Path: .github/workflows/integrated.yml; Owner: maintainers
+# Permissions: contents read; Purpose: installed dry-run bundle and isolated CI smoke test
+# Arguments: none; Usage: push/PR/manual dispatch
+name: Integrated dry-run service bundle
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        runtime: [win-x64, win-arm64]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Validate XML and PowerShell syntax
+        shell: pwsh
+        run: |
+          Get-ChildItem src,tests -Recurse -File | Where-Object { $_.Extension -in '.csproj','.manifest' } | ForEach-Object {$null=[xml](Get-Content $_.FullName -Raw)}
+          Get-ChildItem packaging -Filter *.ps1 | ForEach-Object {
+            $tokens=$null;$errors=$null
+            $null=[Management.Automation.Language.Parser]::ParseFile($_.FullName,[ref]$tokens,[ref]$errors)
+            if($errors.Count){throw ($errors | Out-String)}
+          }
+      - name: Core tests
+        run: dotnet run --project tests/LockedSessionLogoff.SelfTests -c Release
+      - name: Configuration tests
+        run: dotnet run --project tests/LockedSessionLogoff.ConfigurationTests -c Release
+      - name: Publish service and GUI
+        shell: pwsh
+        run: |
+          dotnet publish src/LockedSessionLogoff.Service -c Release -r ${{ matrix.runtime }} --self-contained true -p:PublishTrimmed=false -o artifacts/package/service
+          if($LASTEXITCODE){exit $LASTEXITCODE}
+          dotnet publish src/LockedSessionLogoff.Admin -c Release -r ${{ matrix.runtime }} --self-contained true -p:PublishTrimmed=false -o artifacts/package/admin
+          if($LASTEXITCODE){exit $LASTEXITCODE}
+          Copy-Item packaging/*.ps1 artifacts/package/
+          Copy-Item SERVICE-INTEGRATION.md artifacts/package/
+          @{Runtime='${{ matrix.runtime }}';Commit='${{ github.sha }}'} | ConvertTo-Json | Set-Content artifacts/package/package.json
+      - name: x64 isolated install/uninstall smoke test
+        if: matrix.runtime == 'win-x64'
+        shell: pwsh
+        run: |
+          & ./artifacts/package/Install.ps1 -Confirm:$false
+          try {
+            Start-Sleep -Seconds 5
+            if((Get-Service LockedSessionLogoff).Status -ne 'Running'){throw 'Service not running'}
+            $r=(Get-ItemProperty 'HKLM:\SOFTWARE\LockedSessionLogoff.Runtime').StatusV1 | ConvertFrom-Json
+            if($r.Configuration.Enabled -ne $false){throw 'Installation enabled monitoring'}
+          } finally { & ./artifacts/package/Uninstall.ps1 -Confirm:$false }
+      - name: Checksums
+        shell: pwsh
+        run: |
+          Get-ChildItem artifacts/package -File -Recurse | Sort-Object FullName | ForEach-Object {
+            '{0}  {1}' -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash, [IO.Path]::GetRelativePath((Resolve-Path artifacts/package).Path,$_.FullName)
+          } | Set-Content artifacts/SHA256SUMS.txt
+          Move-Item artifacts/SHA256SUMS.txt artifacts/package/SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: integrated-dryrun-${{ matrix.runtime }}
+          path: artifacts/package/
+          if-no-files-found: error
