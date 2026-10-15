@@ -1,25 +1,31 @@
-<!-- Updated: 2026-10-15 13:13 America/Los_Angeles | Path: /SERVICE-INTEGRATION.md | Owner: maintainers | Permissions: public read/maintainer write | Purpose: retained diagnostics bundle safety/testing/lifecycle | Arguments: WhatIf/RestoreOriginalConfiguration | Usage: read before installation; first-install only -->
-# Retained diagnostics test bundle
+<!-- Updated: 2026-10-15 15:48 America/Los_Angeles | Path: /SERVICE-INTEGRATION.md | Owner: maintainers | Permissions: public read/maintainer write | Purpose: action/outcome test package safety and lifecycle | Arguments: WhatIf/RestoreOriginalConfiguration | Usage: controlled test laptop only for live sign-out; first-install only -->
+# Identity-bound logoff outcome test bundle
 
-## Scope and defaults
+## Scope and status
 
-Controlled test package, not production release. Existing SID/logon identity, exclusions and explicit live permit are unchanged. New source clarifies missing settings and retains bounded diagnostics across service process restarts. New CI/device validation is pending; earlier workstation results do not validate this new implementation.
+New source adds an injected action coordinator, fake-backend tests and bounded observation after an accepted native request. Build/CI/device results for this increment are pending. Source is not a production release or proof of successful live sign-out. Windows 11 x64 spare laptop is the immediate operator-selected target; working workstation remains uninstalled. Native ARM64 testing is deferred to an available Surface Pro later; cross-publication is not device validation.
 
-Installation writes monitoring OFF and dry-run ON. AllowLiveLogoff defaults OFF when absent. Keep Allow LIVE unchecked during this round. No idle-lock helper, profile cleanup, maintenance schedule, central reporting, remote commands or network listeners exist. Product names/identifiers are unchanged. No overwrite upgrade support: uninstall earlier package first.
+Monitoring starts OFF, dry-run ON, and live permit OFF. No remote deployment/live action is performed by committing source. Existing SID exclusions, final native identity/state checks, startup OFF/ON activation and conservative power/gap/error disarming remain. No idle-lock helper, countdown dialog, profile cleanup, maintenance tasks, network reporting or remote commands exist.
 
-## Retained diagnostics
+## Action and outcome semantics
 
-StatusV1 in the existing protected 64-bit HKLM application runtime key now includes RetainedEvents. The SYSTEM writer merges previous history with new current-run events, tags entries by Run ID, and records run start/normal stop. Retention is at most 128 entries AND 32 KiB of serialized UTF-8 history, evicting oldest entries. Current-run RecentEvents remains capped at 24 for snapshot compatibility. Whole serialized report is capped at 64 KiB. Repeated polling does not intentionally append duplicate snapshots. Only changed history/stop triggers an explicit registry flush.
+WouldLogOff never invokes the injected backend. Live requires effective enabled mode, current requested monitoring, unchanged raw configuration and matching observed hash/timeout, eligible current locked state, matching SID/authentication-LUID/session/WTS generation, live-capable service, saved AllowLiveLogoff true and Dry-run false. Restricted writer mutex still coordinates GUI edits with final reads/native request; privileged direct registry edits do not participate. There is no atomic lock-state-conditional Windows logoff API, so a narrow final-check/native-call race remains.
 
-No new disk log file or registry location is added. Retention survives ordinary service stop/start through the existing registry value, not by restoring timers or activation state. No transaction/crash-proof/tamper-evident audit guarantee is made. If earlier report/history is malformed or unsupported, history is restarted with a visible DiagnosticsNote; the warning persists in later reports. Oldest entries also disappear at retention limits. Privileged administrators remain inside the trust boundary. Abrupt crashes can lack a stop marker or lose not-yet-published events. Diagnostic persistence is not a pre-action audit ledger or proof of completed logoff.
+Live attempts receive random action IDs. LogoffRequestAccepted means backend returned without error, NOT completed sign-out. LogoffRequestFailed records exception type or Win32 code without sensitive exception message. No automatic destructive retry: one live attempt per token/logon identity per service run, even after failure or unlock/relock. Maximum 128 attempted identities per run; reaching capacity blocks further attempts. Restart plus explicit OFF/ON can permit a deliberate new test; do not use it as an unattended retry mechanism.
 
-GUI shows retained historical runs separately labeled within the event text; a fresh verified current report is still required. Historical entries are NOT fresh state. When the live report becomes unavailable, retained displayed text is explicitly only the last snapshot. Copy/Export saves that displayed report/history. Restarting GUI/service does not delete retained history; uninstall removes the entire owned StatusV1 value, including history. User-selected export files remain outside uninstall ownership.
+For an accepted request, the service observes pending targets even when monitoring is subsequently disabled. Successful enumeration without the session produces LogoffTargetAbsentObserved. A different actual token identity at the same session number produces LogoffTargetIdentityReplacedObserved. These describe observations after the request, not causal proof that the request alone ended the session. Disconnection, unknown state/token/read error, an empty user identity or an unchanged target are NOT successful completion. At a monotonic 30-second observation deadline the result is LogoffOutcomeUnconfirmed. Late observations do not retroactively confirm within the deadline. A remaining empty login-shell session may therefore produce Unconfirmed despite a user-observed sign-out; record that honestly.
 
-Missing saved settings now reads 'No saved settings - monitoring disabled'. Live timeout displays Inactive whenever observation is disabled. Both absent revisions are labeled explicitly instead of a misleading True. Removing settings is not uninstall and does not restore the captured pre-install baseline. With no saved configuration, GUI defaults the editable dry-run checkbox on; no enforcement setting is silently enabled.
+Stop, power events or observation gaps abandon pending outcomes as Unconfirmed with reason. Pending operations are not resumed across service restart and never trigger repeat native requests. Abrupt crash may leave acceptance without a terminal outcome; this is not a transactional audit ledger. SCM logoff notifications are diagnostic only because session number alone does not identify the original logon.
 
-## New targeted test round
+## Diagnostics retained from previous increment
 
-Wait for Integrated service test bundle CI and x64 disabled restart/history/uninstall smoke to pass. Fully extract integrated-test-win-x64 and inspect package.json/checksums. Unsigned checksums are not code signing. Close old GUIs/consoles. From elevated native PowerShell 7 at package root:
+Existing protected runtime StatusV1 retains at most 128 events / 32 KiB serialized UTF-8 history, with Run IDs and start/normal-stop markers. Current-run queue is 24 events; whole report bounded to 64 KiB. Older events are evicted. Malformed previous history resets with visible warning. No new disk log location; no cryptographic/crash-proof audit promise. Live report still verifies ACL, freshness, SCM PID/process start; historic lines are not current state. Copy/Export saves displayed snapshot; user-chosen exports survive uninstall. Missing settings has friendly inactive wording, inactive timeout and explicit both-absent revisions.
+
+## Controlled laptop procedure after CI passes
+
+Wait for all tests, x64 disabled lifecycle smoke and packaging. Fully extract fresh integrated-test-win-x64; inspect package.json/checksums (unsigned hashes are not signing). Close old GUIs. Do not overwrite earlier installations.
+
+From elevated native PowerShell 7 at package root:
 
 ```powershell
 & "$PSHOME\pwsh.exe" -NoProfile -ExecutionPolicy Bypass -File .\Install.ps1 -WhatIf
@@ -27,13 +33,13 @@ Wait for Integrated service test bundle CI and x64 disabled restart/history/unin
 & "$env:ProgramFiles\LockedSessionLogoff\admin\LockedSessionLogoff.Admin.exe"
 ```
 
-Process-only execution policy override does not bypass enforced MachinePolicy/UserPolicy. Follow authorized signing/policy handling if blocked.
+Process-only ExecutionPolicy Bypass does not override enforced MachinePolicy/UserPolicy; use authorized policy/signing handling if blocked.
 
-1. Verify disabled state, Allow LIVE unchecked, effective dry-run true and timeout Inactive.
-2. Copy/Export a report. Restart the service while monitoring remains OFF. Verify a new Run ID and prior-run retained events plus run markers; no monitoring activation.
-3. Remove saved settings; expect friendly inactive message, no observed revision, 'Both absent' explanation and no active timeout. No need to recreate configuration to uninstall.
-4. Copy/Export again to verify retained cross-run context and current state. No live logoff test required.
-5. Close GUI, capture this installation's baseline, preview/remove, and compare restored original configuration.
+1. Keep Allow LIVE unchecked. Verify disabled/effective dry-run true. Set 20-second timeout, no exclusion for the intended test account, Dry-run checked; save OFF then ON. Lock about 30 seconds, unlock and inspect WouldLogOff. Disable afterward.
+2. ONLY on the spare laptop, with all work saved and no other users' sessions at risk, explicitly choose a live test. Account used must be authorized to sign out. No user-facing countdown exists.
+3. Set a comfortable 60-second timeout, check Allow LIVE, uncheck Dry-run, enable monitoring and review GUI's lost-unsaved-work confirmation. Verify ConfiguredLiveLogoff/effective dry-run false before locking. Do not turn this on on the working workstation.
+4. Lock and allow the timeout. If actually signed out, sign back in and immediately disable monitoring, clear Allow LIVE and save. Export retained events. Correlate acceptance and terminal observation using action ID. If Unconfirmed/failed/no actual sign-out, do not keep retrying; export the evidence and disable live.
+5. Close GUI, capture this installation's baseline, preview/remove, verify service/install/recovery/runtime absent and original configuration restored. No need to recreate settings if removed.
 
 ```powershell
 $baseline = Get-Content "$env:ProgramData\LockedSessionLogoff\install.json" -Raw | ConvertFrom-Json
@@ -41,12 +47,8 @@ $baseline = Get-Content "$env:ProgramData\LockedSessionLogoff\install.json" -Raw
 & "$PSHOME\pwsh.exe" -NoProfile -ExecutionPolicy Bypass -File "$env:ProgramFiles\LockedSessionLogoff\Uninstall.ps1" -RestoreOriginalConfiguration
 ```
 
-RestoreOriginalConfiguration acknowledges discarding test-time edits and restores the captured original ConfigurationV1 (or removes it if originally absent). Uninstaller stops/deletes the owned service, removes owned files/status/history and removes recovery state only on success. Verify service/install/recovery/runtime absent and original raw configuration restored, using fresh baseline from THIS installation. Unexpected data/conflicts/partial failures require preserving the recovery record, not blind deletion/reinstallation. Interruption/reparse/race/upgrade hardening remains pending. Uninstall cannot reverse completed logoffs or recover unsaved work.
+Uninstaller handles service stop/delete; explicit restoration discards test edits and restores captured original ConfigurationV1 (or removes originally absent value). It removes owned status including retained history and only removes recovery state on success; preserve recovery record on any conflict/failure, never blindly delete remnants. User exports remain untouched. First-install only: interruption/reparse/concurrency/race/recovery/upgrade hardening is still pending. Uninstall cannot reverse completed logoff or recover unsaved work.
 
-## Unchanged live-action boundary
+## Validation boundaries
 
-Only installed SYSTEM service can execute live logoff, and only after explicit monitoring activation, Allow LIVE checked, Dry-run unchecked, validated token SID/session/authentication LUID, exclusions and final configuration/native lock-state checks. GUI writers coordinate through a restricted mutex; privileged direct registry tools do not. Failed/unknown/disconnected identities/states are blocked. Service startup with monitoring already ON still requires OFF then ON. Power/gap/error disarming remains conservative. An unavoidable check-to-native-call race remains; do not claim atomic locked-only enforcement. WTSLogoffSession acceptance is not confirmed completion. No warning countdown or outcome reconciliation exists yet. Live logoff remains unvalidated on the workstation and is NOT requested for this diagnostics round.
-
-## Evidence and remaining work
-
-See VALIDATION-386df4b.md for supplied workstation checks of the prior SID-aware package, including Copy/Export, exclusion removal, restart activation, removal of settings and uninstall restoration. Exact binary hashes/package.json commit were not independently inspected; do not overstate artifact provenance. Old memory-only log reset was expected and motivated this increment. New tests cover history bounds/dedup/restart merge and presentation; CI additionally checks actual service restart retention while disabled. Native ARM64 execution remains untested. Full durable audit/outcome ledger, warning UI, adversarial token/state/ACL/config races, recovery/upgrade, idle-lock/server scope remain in TASKS.md and SERVER-PLAN.md.
+Prior SID-aware round: VALIDATION-386df4b.md. Prior diagnostics source 8c802fd: supplied GUI reports showed retained previous/current run and stop/start markers, monitoring stayed off, friendly missing-settings/Inactive/both-absent displays. Operator explicitly confirmed exported file and closeout completion; final uninstall checks were NOT pasted for that round. Exact artifact hashes were not independently inspected. These prior results do not establish new action/outcome code or live success. Remaining countdown/warning UX, hardening and central/idle/profile/maintenance scope are in TASKS.md and SERVER-PLAN.md.

@@ -1,6 +1,6 @@
-# Updated: 2026-10-15 13:13 America/Los_Angeles
+# Updated: 2026-10-15 15:48 America/Los_Angeles
 # Path: .github/workflows/integrated.yml; Owner: maintainers
-# Permissions: contents read; Purpose: diagnostics tests, disabled restart persistence and lifecycle smoke
+# Permissions: contents read; Purpose: fake-backend outcome tests plus disabled lifecycle/retention smoke
 # Arguments: none; Usage: push/PR/manual dispatch; never enables live actions
 name: Integrated service test bundle
 on: [push, pull_request, workflow_dispatch]
@@ -30,6 +30,8 @@ jobs:
         run: dotnet run --project tests/LockedSessionLogoff.EligibilityTests -c Release
       - name: Diagnostics tests (no external state)
         run: dotnet run --project tests/LockedSessionLogoff.DiagnosticsTests -c Release
+      - name: Action/outcome tests (fake backend only)
+        run: dotnet run --project tests/LockedSessionLogoff.ActionTests -c Release
       - name: Publish service and GUI
         shell: pwsh
         run: |

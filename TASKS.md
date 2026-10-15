@@ -1,44 +1,38 @@
-<!-- Updated: 2026-10-15 13:13 America/Los_Angeles | Path: /TASKS.md | Owner: maintainers | Permissions: public read/maintainer write | Purpose: authoritative checkpoint and next validation gates | Arguments: none | Usage: distinguish source/CI/synthetic/device evidence -->
+<!-- Updated: 2026-10-15 15:48 America/Los_Angeles | Path: /TASKS.md | Owner: maintainers | Permissions: public read/maintainer write | Purpose: outcome implementation checkpoint and scoped validation | Arguments: none | Usage: separate source/CI/synthetic/device/operator evidence -->
 # Current implementation tracker
 
-## Prior round complete: SID-aware workstation dry-run lifecycle
+## Completed prior workstation rounds
 
-See [sanitized checkpoint](VALIDATION-386df4b.md). Supplied evidence establishes clean install, GUI-verified reports, dry-run lock timeout/unlock, SID exclusion and removal restoring eligibility, restart OFF/ON activation gate, disable, Copy/Export, remove-settings inactive behavior, and uninstall with service/files/recovery/runtime absent and baseline restored. Exact artifact hash was not independently inspected. User is uninstalled. Live logoff was not tested or requested to finish this round.
+SID-aware ordinary dry-run lifecycle: [VALIDATION-386df4b.md](VALIDATION-386df4b.md), including terminal verification of original baseline restoration.
 
-Earlier foundation, console and configuration evidence remains in [VALIDATION.md](VALIDATION.md). These records are scoped observations, not broad production readiness or an independent CI audit.
+Diagnostics increment 8c802fd: supplied verified GUI reports directly showed history across a service restart, distinct run identities and stop/start markers, monitoring remaining disabled, friendly missing-settings state, inactive timeout and both-absent revision wording. Operator explicitly confirmed successful file export and remaining closeout completion. Final removal/baseline checks were not pasted for that round; record operator confirmation separately from direct verification. Binary hashes/CI runs were not independently inspected. Working machine remains uninstalled.
 
-## New increment: source present, build/device results pending
+## New outcome increment: source present, build/device tests pending
 
-- Bounded retained diagnostics in existing protected StatusV1; up to 128 entries/32 KiB serialized history with Run IDs and start/normal-stop markers.
-- Current-run snapshots remain 24 entries. Retained history is best-effort diagnostics, not a transaction/tamper-evident audit ledger.
-- Friendly no-settings state, inactive timeout and explicit absent revision comparison; clearer remove-settings warning.
-- GUI retained history Copy/Export; historical versus current state clearly distinguished.
-- Pure diagnostics tests plus x64 disabled service restart/history/uninstall smoke.
-- No live authorization/defaults, timer logic, SID policy, installer ownership locations or networking changes.
+- Injectable backend shared by service action path and synthetic fake-backend tests.
+- Revalidation of current configuration/eligibility at action boundary; dry-run cannot invoke backend.
+- Action IDs, request failure/acceptance, identity-bound pending observations, distinct target-absent/replaced observations and 30-second unconfirmed deadline.
+- Pending observation continues when monitoring is disabled; stop/power/gaps abandon without claiming completion.
+- One live attempt per token/logon identity per service run, maximum 128; no automatic destructive retries.
+- CI runs new action/outcome tests in both publication jobs; x64 native smoke remains disabled and never tests real logoff.
 
-## Next targeted validation
+## Next gate
 
-1. New CI, tests and x64 restart-persistence smoke must pass.
-2. Clean native install; monitoring stays OFF, Allow LIVE unchecked.
-3. Verify retained history survives service restart, new Run ID and inactive timeout.
-4. Remove settings and verify friendly inactive/absent-revision presentation.
-5. Copy/Export cross-run history, then uninstall and verify original baseline and owned runtime/history removal.
-
-Do not repeat every already-passed ordinary SID dry-run scenario just to validate diagnostics. No live test requested this round. New behavior remains pending until results supplied.
+Commit approved source, verify CI and x64 packaging. Operator-selected spare Windows 11 x64 laptop is ready. Short dry-run sanity check, then ONE explicitly authorized live test with all work saved and no other users at risk, lost-work warning reviewed, inspect acceptance/outcome IDs, disable/clear permit, export, uninstall and verify captured baseline. Do not deploy to working machine. ARM64 Surface Pro device testing deferred until available at home; compilation alone does not establish native ARM64 behavior.
 
 ## Remaining scope
 
-- Diagnostics device validation; corruption/retention/registry failures and power-loss behavior.
-- Live logoff safe-account validation, completion reconciliation and warning/countdown UX.
-- Full token/session reuse, multiple users, unlock/config/ACL/concurrency adversarial tests.
-- Transactional audit/outcome ledger; full interruption/retry/recovery/upgrade/reparse hardening.
-- Idle-lock helper/authenticated IPC/supervision and suspend/reconnect semantics.
-- Profile inventory/guarded deletion/native retention policy and baseline restoration.
-- Owned restart/shutdown scheduling, DST/missed-run/collision/reversal tests.
-- Ubuntu/Laravel central reporting/auth/scoped groups/roles/privacy/retention/API; later typed remote commands with replay/expiry/revocation/approval, never arbitrary shell execution.
-- ARM64 device tests, licensing/dependency/signing/release gates.
-- Brand/name checks, clean branded-repository handoff, then separately approve old working repository privacy.
+- New code build/synthetic/CI/device results and actual live outcome evidence.
+- Countdown/warning UX before shared-workstation readiness; no countdown exists now.
+- Full session/token reuse, simultaneous users, unknown/disconnected/unlock/config/ACL/concurrency adversarial tests; diagnostics corruption/retention/power-loss tests.
+- Transactional audit/outcome ledger and crash/restart reconciliation; bounded diagnostics are not that ledger.
+- Interrupted install/removal, retry/recovery/upgrade/reparse/race hardening.
+- Idle-lock helper, authenticated IPC, supervision and suspend/reconnect semantics.
+- Profile inventory/guarded deletion/native retention policy/baseline reversal.
+- Owned restart/shutdown scheduling and DST/missed-run/collision/reversal tests.
+- Ubuntu/Laravel central reporting/auth/scoped groups/roles/privacy/retention/API; later typed commands with replay/expiry/revocation/approval, never arbitrary shell execution.
+- ARM64 device tests, dependency/licensing/signing/release gates, naming/brand and clean repository handoff; old working repository privacy requires separate approval.
 
 ## Continuity/security
 
-Current [package guide](SERVICE-INTEGRATION.md), [server plan](SERVER-PLAN.md), [branding](BRANDING.md), [idle-lock](IDLE-LOCK.md). Older README/incremental guides are historical; this checkpoint/current package guide govern the bundle. Use decoded file contents/commit patches, not SHA metadata as content. Preserve date/path/owner/permissions/purpose/arguments/usage in records. No public organization/user/machine identifiers. Keep live permit OFF by default; reporting/maintenance unimplemented. Public source writes install nothing remotely.
+[Current package guide](SERVICE-INTEGRATION.md), [earlier validation](VALIDATION.md), [server](SERVER-PLAN.md), [branding](BRANDING.md), [idle-lock](IDLE-LOCK.md). Older README/incremental guides are historical; current tracker/guide govern this package. Read actual source or commit patches, not SHA metadata as file content. Preserve date/path/owner/permissions/purpose/arguments/usage. Never publish account/machine/organization identifiers or raw operator logs. Monitoring/live permission off by default; no network listeners, arbitrary commands or automatic deployment introduced.

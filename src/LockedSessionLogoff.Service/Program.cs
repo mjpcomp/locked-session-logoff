@@ -1,6 +1,6 @@
-// Updated: 2026-10-15 12:13 America/Los_Angeles
+// Updated: 2026-10-15 15:48 America/Los_Angeles
 // Path: src/LockedSessionLogoff.Service/Program.cs; Owner: maintainers
-// Permissions: public read/maintainer write; Purpose: SID-aware monitoring and opt-in guarded logoff
+// Permissions: public read/maintainer write; Purpose: guarded logoff and bounded identity-aware outcome tracking
 // Arguments: SCM none; --self-check; --console [--observe-seconds N]
 // Usage: installed SYSTEM service; console cannot execute live actions
 using System.ComponentModel;
@@ -37,6 +37,7 @@ internal sealed class ConfiguredMonitor(bool publish, int? consoleSeconds = null
 {
     private readonly object sync = new();
     private readonly ConfigurationGate gate = new(sidCapable: true, liveCapable: publish);
+    private readonly LogoffCoordinator actions = new(new NativeLogoffBackend(), liveCapable: publish);
     private readonly LockTimer timer = new(); private readonly Stopwatch clock = Stopwatch.StartNew();
     private readonly Dictionary<int, string> states = new(), blocked = new(); private readonly HashSet<int> reported = new();
     private readonly Queue<string> events = new(); private readonly string runId = Guid.NewGuid().ToString("N");
@@ -47,8 +48,33 @@ internal sealed class ConfiguredMonitor(bool publish, int? consoleSeconds = null
     private void Accept(EffectiveConfiguration next) { if (effective == next) return; Clear(); effective = next; Event("Configuration " + JsonSerializer.Serialize(next)); }
     private void Forget(int id) { timer.Forget(id); states.Remove(id); reported.Remove(id); }
     private void Block(int id, string reason) { Forget(id); if (!blocked.TryGetValue(id, out var old) || old != reason) Event(reason + " session=" + id); blocked[id] = reason; }
+    private void AbandonOutcomes(string reason) { foreach (var result in actions.Abandon(reason)) Event(result.ToString()); }
+    private void Reconcile(IReadOnlyList<SessionSnapshot>? snapshots, TimeSpan now)
+    {
+        foreach (var pending in actions.Pending)
+        {
+            var observation = SessionObservation.Unknown;
+            if (snapshots is not null)
+            {
+                var s = snapshots.SingleOrDefault(v => v.Id == pending.Target.SessionId);
+                if (s is null) observation = SessionObservation.SessionAbsent;
+                else if (s.Error is null && !string.IsNullOrEmpty(s.Identity))
+                {
+                    try
+                    {
+                        var actual = SessionTokenReader.Read(s.Id);
+                        observation = actual != pending.Target ? SessionObservation.IdentityReplaced
+                            : s.Identity == pending.WtsIdentity ? SessionObservation.SameIdentityPresent : SessionObservation.Unknown;
+                    }
+                    catch (Exception) { observation = SessionObservation.Unknown; }
+                }
+            }
+            var result = actions.Observe(pending.ActionId, observation, now);
+            if (result is not null) Event(result.ToString());
+        }
+    }
     public void SessionChanged(int id, string reason) { lock (sync) { if (stopped) return; Forget(id); blocked.Remove(id); Event("SessionEvent " + id + " " + reason); } }
-    public void PowerChanged() { lock (sync) { if (stopped) return; Clear(); Accept(gate.Observe(null, null, "Power")); Event("PowerEvent: disarmed"); } }
+    public void PowerChanged() { lock (sync) { if (stopped) return; AbandonOutcomes("PowerEvent"); Clear(); Accept(gate.Observe(null, null, "Power")); Event("PowerEvent: disarmed"); } }
     public void Poll()
     {
         lock (sync)
@@ -57,55 +83,64 @@ internal sealed class ConfiguredMonitor(bool publish, int? consoleSeconds = null
             try
             {
                 var now = clock.Elapsed;
-                if (now - lastPoll > TimeSpan.FromSeconds(10)) { Clear(); gate.Observe(null, null, "Gap"); } lastPoll = now;
-                var saved = consoleSeconds.HasValue ? (Settings: new AdminSettings(), Raw: (string?)null) : AdminSettingsStore.Read();
+                if (now - lastPoll > TimeSpan.FromSeconds(10)) { AbandonOutcomes("ObservationGap"); Clear(); gate.Observe(null, null, "Gap"); } lastPoll = now;
+                var saved = consoleSeconds.HasValue
+                    ? (Settings: new AdminSettings { MonitoringRequested = true, DryRun = true, LockedTimeoutSeconds = consoleSeconds.Value }, Raw: (string?)null)
+                    : AdminSettingsStore.Read();
                 var next = consoleSeconds.HasValue ? new EffectiveConfiguration(true, true, false, consoleSeconds.Value, null, "ConsoleDryRun") : gate.Observe(saved.Settings, saved.Raw);
                 Accept(next);
-                if (next.Enabled)
+                if (next.Enabled || actions.Pending.Count > 0)
                 {
-                    var snapshots = SessionReader.ReadAll(); var ids = snapshots.Select(s => s.Id).ToHashSet();
-                    foreach (var id in states.Keys.Concat(blocked.Keys).Distinct().Where(id => !ids.Contains(id)).ToArray()) { Forget(id); blocked.Remove(id); }
-                    var options = new MonitorOptions { Enabled = true, DryRun = next.DryRun, Debug = next.Debug, Timeout = TimeSpan.FromSeconds(next.TimeoutSeconds) };
-                    foreach (var s in snapshots)
+                    var snapshots = SessionReader.ReadAll();
+                    Reconcile(snapshots, clock.Elapsed);
+                    if (next.Enabled)
                     {
-                        if (!s.CanObserveTimer) { Forget(s.Id); continue; }
-                        TokenIdentity identity;
-                        try { identity = SessionTokenReader.Read(s.Id); } catch (Exception e) { Block(s.Id, "IdentityUnavailable:" + e.GetType().Name); continue; }
-                        if (saved.Settings.ExcludedSids.Contains(identity.Sid, StringComparer.OrdinalIgnoreCase)) { Block(s.Id, "ExcludedBySid"); continue; }
-                        blocked.Remove(s.Id);
-                        var key = s.Identity + ":" + identity.Key + ":" + s.LockState;
-                        if (!states.TryGetValue(s.Id, out var old) || old != key) { Forget(s.Id); states[s.Id] = key; Event(s.LockState + " session=" + s.Id); }
-                        var state = s.LockState == "Locked" ? LockState.Locked : LockState.Unlocked;
-                        var decision = timer.Observe(s.Id, identity.Key, state, now, options);
-                        if (decision == TimerDecision.None || reported.Contains(s.Id)) continue;
-                        try
+                        var ids = snapshots.Select(s => s.Id).ToHashSet();
+                        foreach (var id in states.Keys.Concat(blocked.Keys).Distinct().Where(id => !ids.Contains(id)).ToArray()) { Forget(id); blocked.Remove(id); }
+                        var options = new MonitorOptions { Enabled = true, DryRun = next.DryRun, Debug = next.Debug, Timeout = TimeSpan.FromSeconds(next.TimeoutSeconds) };
+                        foreach (var s in snapshots)
                         {
-                            using var lease = ConfigurationSecurity.WriterLease();
-                            var latest = consoleSeconds.HasValue ? saved : AdminSettingsStore.Read();
-                            if (latest.Raw != saved.Raw || (!consoleSeconds.HasValue && !latest.Settings.MonitoringRequested)) { Clear(); Event("CandidateBlockedConfigurationChanged"); break; }
-                            var actual = SessionTokenReader.Read(s.Id);
-                            var current = SessionReader.ReadAll().SingleOrDefault(v => v.Id == s.Id);
-                            if (!SessionEligibility.Allows(identity, actual, current, s.Identity, latest.Settings.ExcludedSids)) { Block(s.Id, "CandidateBlockedIdentityOrState"); continue; }
-                            reported.Add(s.Id);
-                            if (next.DryRun) Event("WouldLogOff session=" + s.Id);
-                            else if (publish && latest.Settings.AllowLiveLogoff && !latest.Settings.DryRun)
-                            { NativeLogoff.Request(s.Id); Event("LogoffRequestAccepted session=" + s.Id + " (completion not yet confirmed)"); }
-                            else Event("LiveActionBlocked session=" + s.Id);
+                            if (!s.CanObserveTimer) { Forget(s.Id); continue; }
+                            TokenIdentity identity;
+                            try { identity = SessionTokenReader.Read(s.Id); } catch (Exception e) { Block(s.Id, "IdentityUnavailable:" + e.GetType().Name); continue; }
+                            if (saved.Settings.ExcludedSids.Contains(identity.Sid, StringComparer.OrdinalIgnoreCase)) { Block(s.Id, "ExcludedBySid"); continue; }
+                            blocked.Remove(s.Id);
+                            var key = s.Identity + ":" + identity.Key + ":" + s.LockState;
+                            if (!states.TryGetValue(s.Id, out var old) || old != key) { Forget(s.Id); states[s.Id] = key; Event(s.LockState + " session=" + s.Id); }
+                            var state = s.LockState == "Locked" ? LockState.Locked : LockState.Unlocked;
+                            var decision = timer.Observe(s.Id, identity.Key, state, now, options);
+                            if (decision == TimerDecision.None || reported.Contains(s.Id)) continue;
+                            try
+                            {
+                                using var lease = ConfigurationSecurity.WriterLease();
+                                var latest = consoleSeconds.HasValue ? saved : AdminSettingsStore.Read();
+                                if (latest.Raw != saved.Raw || (!consoleSeconds.HasValue && !latest.Settings.MonitoringRequested)) { Clear(); Event("CandidateBlockedConfigurationChanged"); break; }
+                                var actual = SessionTokenReader.Read(s.Id);
+                                var current = SessionReader.ReadAll().SingleOrDefault(v => v.Id == s.Id);
+                                var result = actions.Execute(identity, s.Identity, saved.Raw, latest.Settings, latest.Raw, next, actual, current, clock.Elapsed);
+                                reported.Add(s.Id); Event(result.ToString());
+                                if (result.Kind.StartsWith("CandidateBlocked", StringComparison.Ordinal)) { timer.Forget(s.Id); states.Remove(s.Id); }
+                            }
+                            catch (Exception e) { reported.Add(s.Id); Event("CandidateOrLogoffFailed session=" + s.Id + " type=" + e.GetType().Name); }
                         }
-                        catch (Exception e) { reported.Add(s.Id); Event("CandidateOrLogoffFailed session=" + s.Id + " type=" + e.GetType().Name); }
                     }
                 }
                 Report("Running");
             }
-            catch (Exception e) { Clear(); Accept(gate.Observe(null, null, "Failure")); Event("Blocked:" + e.GetType().Name); try { Report("Running"); } catch { } }
+            catch (Exception e)
+            {
+                Clear(); Accept(gate.Observe(null, null, "Failure")); Event("Blocked:" + e.GetType().Name);
+                Reconcile(null, clock.Elapsed);
+                try { Report("Running"); } catch { }
+            }
         }
     }
     private void Report(string state) { if (publish) ServiceReportStore.Write(new(1, Environment.ProcessId, processStart, runId, DateTimeOffset.UtcNow, state, effective, events.ToArray())); }
-    public void Stop() { lock (sync) { if (stopped) return; stopped = true; Clear(); effective = gate.Observe(null, null, "Stop"); try { Report("Stopped"); } catch { } } }
+    public void Stop() { lock (sync) { if (stopped) return; stopped = true; AbandonOutcomes("ServiceStopped"); Clear(); effective = gate.Observe(null, null, "Stop"); try { Report("Stopped"); } catch { } } }
 }
-internal static class NativeLogoff
+internal sealed class NativeLogoffBackend : ILogoffBackend
 {
-    public static void Request(int id)
+    public void Request(int id)
     {
         using var identity = WindowsIdentity.GetCurrent();
         if (id <= 0 || identity.User?.Value != "S-1-5-18") throw new UnauthorizedAccessException("SYSTEM and user session required");
