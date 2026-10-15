@@ -1,43 +1,49 @@
-<!-- Updated: 2026-10-15 11:21 America/Los_Angeles | Path: /TASKS.md | Owner: maintainers | Permissions: public read/maintainer write | Purpose: authoritative current checkpoint | Arguments: none | Usage: consult all linked guides; checked means specifically evidenced -->
+<!-- Updated: 2026-10-15 12:13 America/Los_Angeles | Path: /TASKS.md | Owner: maintainers | Permissions: public read/maintainer write | Purpose: authoritative current checkpoint | Arguments: none | Usage: checked means specifically evidenced; read linked guides -->
 # Current implementation tracker
 
 ## Latest increment
 
-Installed dry-run service integration source prepared: see [SERVICE-INTEGRATION.md](SERVICE-INTEGRATION.md). This replaces earlier source-status checkpoints, not their evidence. Build/CI smoke/device validation of this new increment remains pending. Nothing is installed remotely by repository edits.
+SID-aware service/live-opt-in source and new events GUI prepared. See [SERVICE-INTEGRATION.md](SERVICE-INTEGRATION.md) for actual capabilities, safety boundaries, tests and removal. New build/device results are pending. Public edits install nothing remotely. No branded repository or identifiers renamed.
 
-## Prior evidenced passes
+## Prior evidence (old package, not new feature validation)
 
-- [x] 14 core synthetic tests and x64 compilation from supplied CI logs.
-- [x] ARM64 foundation compilation, maintainer-reported only.
-- [x] x64 probe lock/unlock snapshots on one workstation.
-- [x] x64 console timer long/short lock dry-run.
-- [x] Administrator GUI save/reopen persistence, maintainer-reported.
-- [x] Configured console debug reload, enable/20-second timeout, unlock, timeout reload to 200, disable from supplied output.
-- [ ] Installed service configuration/status/events/lifecycle on actual device.
-- [ ] ARM64 device execution.
+- [x] 14 core synthetic tests from supplied logs; later builds maintainer-reported green.
+- [x] ARM64 foundation/build compilation reported, no device validation.
+- [x] x64 probe and console lock/unlock/dry-run timing.
+- [x] GUI save/reopen persistence.
+- [x] Configured console debug reload, enable/20-second threshold, timeout reload, disable.
+- [x] Installed 299e347 service received lock/unlock notifications and emitted WouldLogOff, with enable/disable reflected.
+- [x] Previewed uninstall and owned service/files/recovery/runtime removal; original preexisting configuration restored exactly, supplied verification output.
+- [ ] GUI report-verification checks independently exercised (prior service evidence was also read through PowerShell).
 
-## Immediate next gate
+## New code present, validation pending
 
-Verify integrated CI including x64 isolated install/uninstall smoke test before attempting a workstation install. Then follow SERVICE-INTEGRATION.md to test disabled installation, service-reported observed revision, SCM session events, configuration reload, and previewed uninstall/baseline recovery. Do not repeat unrelated passed console tests.
+- Token SID/session/authentication LUID reader with safe handle disposal and layout checks.
+- Actual SID exclusions and rechecked candidate eligibility.
+- Explicit default-off live permit, immutable backend capability gate and native request behind checks.
+- Separate rolling Recent Service Events plus local Copy/Export.
+- 17 new synthetic eligibility/permission tests and updated integrated packaging/smoke.
+
+## Immediate gate
+
+Verify new CI first. Clean install native package (no overwrite upgrade), verify disabled state. Test SYSTEM token queries, dry-run, actual SID exclusion, configuration/state changes and GUI events. Only then optional live test in an authorized safe test session with work saved and explicit consent. Do not infer live success from native request acceptance or synthetic tests. Record each result separately.
 
 ## Remaining scope
 
-- [ ] Configuration corruption/ACL/concurrency tests and additional automated security/lifecycle coverage.
-- [ ] Native token/logon identity and exclusion SID enforcement; final pre-action checks.
-- [ ] Functional logoff, same-build runtime dry-run/debug, explicit enablement.
-- [ ] Idle-lock session helper, authenticated IPC, supervision, suspend/reconnect behavior.
-- [ ] Durable bounded diagnostics/audit, transactional change ledger, interruption recovery and upgrade support.
-- [ ] Profile inventory/guarded deletion/native retention-policy management.
-- [ ] Owned scheduled restart/shutdown and reversal.
-- [ ] Ubuntu/Laravel reporting/dashboard/API, scoped roles/groups/external authentication.
-- [ ] Later secured remote commands, scheduling, replay/revocation safeguards.
-- [ ] License decision, dependency/signing review, checksums and production release gates.
-- [ ] Branding clearance/new clean branded repository/migration; no identifier change yet.
+- [ ] New CI, x64 native identity/exclusion/live device results and lifecycle restoration.
+- [ ] Full session reuse/multiple users/unlock timing races/error/config/ACL/concurrency adversarial tests.
+- [ ] Logoff outcome reconciliation, warning/countdown UX, stronger persistent diagnostics/audit and transactional ledger.
+- [ ] Interrupted installation/removal, retry/recovery, upgrade support, reparse/race hardening.
+- [ ] Idle-lock helper, authenticated IPC, supervision, suspend/reconnect semantics.
+- [ ] Profile inventory/guarded deletion/native retention-policy controls and reversal.
+- [ ] Owned restart/shutdown scheduling, DST/missed-run/collision/reversal tests.
+- [ ] Ubuntu/Laravel central reporting, auth/scoped groups/roles, privacy, retention and API.
+- [ ] Later remote typed commands, replay/expiry/revocation, scheduling and approvals.
+- [ ] ARM64 device tests, license/dependency/signing review and release gates.
+- [ ] Naming/brand checks and clean branded-repo handoff; then separately approve old working repo privacy.
 
-## Planning index and continuity
+## Continuity
 
-[README](README.md), [validation](VALIDATION.md), [current service integration](SERVICE-INTEGRATION.md), [server/security](SERVER-PLAN.md), [branding](BRANDING.md), [idle-lock](IDLE-LOCK.md). Historical incremental guides: [probe](INTEGRATION.md), [service host](SERVICE.md), [admin editor](ADMIN.md), [configuration bridge](CONFIG-INTEGRATION.md).
+[Validation](VALIDATION.md), [current installed guide](SERVICE-INTEGRATION.md), [server/admin security](SERVER-PLAN.md), [branding](BRANDING.md), [idle-lock](IDLE-LOCK.md). README and older incremental guides contain historical implementation descriptions; current guide and this checkpoint govern this bundle.
 
-Public repository and examples remain organization-neutral. Local enforcement/reporting/maintenance default disabled. No live lock/logoff or maintenance APIs in current code. Keep source/compiled/synthetic-tested/installed-device-tested separate. Use commit/PR diffs for dropped decoded file reads; never treat a SHA as content. Headers/records must retain timestamp, path, ownership/permissions, purpose, arguments/usage.
-
-This increment changes Windows library/project/settings/security/status, service and GUI code, packaging scripts/workflow, and this checkpoint plus service guide. Registry/application effects occur only when an operator runs scripts or confirms GUI writes. Current bundle's restoration conflicts are conservative and documented; incomplete uninstall must retain recovery state.
+Use commit/PR diffs for missing decoded reads; never use SHA metadata as content. Preserve timestamps/path/owner/permissions/purpose/arguments/usage in records. Keep source/built/synthetic-tested/device-tested distinct. No organization/user/machine identifiers in public records. Reporting and maintenance stay disabled/unimplemented. Live logoff defaults OFF and requires explicit new configuration; no arbitrary command execution or network listener introduced.

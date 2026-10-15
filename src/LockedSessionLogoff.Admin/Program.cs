@@ -1,62 +1,66 @@
-// Updated: 2026-10-15 11:21 America/Los_Angeles
+// Updated: 2026-10-15 12:13 America/Los_Angeles
 // Path: src/LockedSessionLogoff.Admin/Program.cs; Owner: maintainers
-// Permissions: public read/maintainer write; Purpose: saved versus service-reported state
-// Arguments: none; Usage: elevated executable; confirmed saves only
+// Permissions: public read/maintainer write; Purpose: explicit live consent and visible events
+// Arguments: none; Usage: elevated GUI; saves/exports require operator interaction
 using System.Security.Cryptography;
 using System.Text;
 using LockedSessionLogoff.Windows;
 namespace LockedSessionLogoff.Admin;
-internal static class Program
-{
-    [STAThread] private static void Main() { ApplicationConfiguration.Initialize(); Application.Run(new AdminForm()); }
-}
+internal static class Program { [STAThread] private static void Main() { ApplicationConfiguration.Initialize(); Application.Run(new AdminForm()); } }
 internal sealed class AdminForm : Form
 {
     private readonly CheckBox enabled = new() { Text = "Request monitoring", AutoSize = true };
-    private readonly CheckBox dry = new() { Text = "Dry-run requested (this build always forces dry-run)", AutoSize = true };
+    private readonly CheckBox dry = new() { Text = "Dry-run (report only, no logoff)", AutoSize = true };
+    private readonly CheckBox permit = new() { Text = "Allow LIVE logoff - unsaved work may be lost", AutoSize = true, ForeColor = Color.DarkRed };
     private readonly CheckBox debug = new() { Text = "Debug requested", AutoSize = true };
     private readonly NumericUpDown timeout = new() { Minimum = 5, Maximum = 604800, Value = 3600 };
-    private readonly TextBox exclusions = new() { Multiline = true, Width = 700, Height = 55, ScrollBars = ScrollBars.Vertical };
-    private readonly TextBox live = new() { Multiline = true, ReadOnly = true, Width = 1050, Height = 155, ScrollBars = ScrollBars.Vertical };
+    private readonly TextBox exclusions = new() { Multiline = true, Width = 700, Height = 50, ScrollBars = ScrollBars.Vertical };
+    private readonly TextBox live = new() { Multiline = true, ReadOnly = true, Dock = DockStyle.Fill, ScrollBars = ScrollBars.Vertical };
+    private readonly TextBox eventText = new() { Multiline = true, ReadOnly = true, Dock = DockStyle.Fill, ScrollBars = ScrollBars.Both, WordWrap = false };
+    private readonly GroupBox eventGroup = new() { Text = "Recent Service Events (rolling 24 entries, not Event Viewer)", Dock = DockStyle.Fill };
     private readonly Label message = new() { AutoSize = true, MaximumSize = new Size(1050, 0) };
     private readonly DataGridView sessions = new() { Dock = DockStyle.Fill, ReadOnly = true, AllowUserToAddRows = false, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.DisplayedCells };
-    private readonly Button save = new() { Text = "Save", AutoSize = true };
-    private readonly Button remove = new() { Text = "Remove saved settings", AutoSize = true };
+    private readonly Button save = new() { Text = "Save", AutoSize = true }, remove = new() { Text = "Remove saved settings", AutoSize = true };
     private readonly System.Windows.Forms.Timer refresh = new() { Interval = 3000 };
-    private string? expectedRaw;
-    private bool loaded;
+    private string? expectedRaw; private bool loaded;
     public AdminForm()
     {
-        Text = "Locked Session Logoff - Service integration (dry-run only)";
-        Size = new Size(1180, 900); MinimumSize = new Size(900, 750); StartPosition = FormStartPosition.CenterScreen;
-        var root = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 2, ColumnCount = 1, Padding = new Padding(12) };
-        root.RowStyles.Add(new RowStyle(SizeType.AutoSize)); root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        Text = "Locked Session Logoff - SID-aware service test"; Size = new Size(1180, 960); MinimumSize = new Size(900, 800); StartPosition = FormStartPosition.CenterScreen;
+        var root = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 4, ColumnCount = 1, Padding = new Padding(12) };
+        root.RowStyles.Add(new RowStyle(SizeType.AutoSize)); root.RowStyles.Add(new RowStyle(SizeType.Absolute, 110)); root.RowStyles.Add(new RowStyle(SizeType.Absolute, 220)); root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         var panel = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Top, FlowDirection = FlowDirection.TopDown, WrapContents = false };
-        panel.Controls.Add(new Label { Text = "DRY-RUN ONLY: no lock/logoff, profile cleanup, restart or reporting actions.", ForeColor = Color.DarkRed, AutoSize = true });
-        panel.Controls.AddRange([enabled, dry, debug, new Label { Text = "Timeout (seconds):", AutoSize = true }, timeout,
-            new Label { Text = "Exclusion SIDs, one per line. Nonempty exclusions BLOCK observation until SID integration.", AutoSize = true }, exclusions]);
-        var buttons = new FlowLayoutPanel { AutoSize = true };
-        var reload = new Button { Text = "Reload/discard edits", AutoSize = true };
-        buttons.Controls.AddRange([save, reload, remove]); panel.Controls.Add(buttons); panel.Controls.Add(message); panel.Controls.Add(live);
-        root.Controls.Add(panel, 0, 0); root.Controls.Add(sessions, 0, 1); Controls.Add(root);
+        panel.Controls.Add(new Label { Text = "Start with dry-run. LIVE requires Allow LIVE checked AND Dry-run unchecked. No idle-lock/profile/restart actions yet.", AutoSize = true, ForeColor = Color.DarkRed });
+        panel.Controls.AddRange([enabled, dry, permit, debug, new Label { Text = "Locked timeout (seconds):", AutoSize = true }, timeout, new Label { Text = "Exclusion SIDs, one per line. Use whoami /user under the intended user's account.", AutoSize = true }, exclusions]);
+        var buttons = new FlowLayoutPanel { AutoSize = true }; var reload = new Button { Text = "Reload/discard edits", AutoSize = true };
+        buttons.Controls.AddRange([save, reload, remove]); panel.Controls.Add(buttons); panel.Controls.Add(message);
+        var eventButtons = new FlowLayoutPanel { Dock = DockStyle.Top, Height = 35 };
+        var copy = new Button { Text = "Copy report/events", AutoSize = true }; var export = new Button { Text = "Export report/events", AutoSize = true };
+        eventButtons.Controls.AddRange([copy, export]); eventGroup.Controls.Add(eventText); eventGroup.Controls.Add(eventButtons);
+        root.Controls.Add(panel, 0, 0); root.Controls.Add(live, 0, 1); root.Controls.Add(eventGroup, 0, 2); root.Controls.Add(sessions, 0, 3); Controls.Add(root);
+        copy.Click += (_, _) => { try { Clipboard.SetText(live.Text + "\r\n\r\n" + eventText.Text); } catch (Exception e) { message.Text = e.Message; } };
+        export.Click += (_, _) =>
+        {
+            using var dialog = new SaveFileDialog { Filter = "Text files|*.txt", FileName = "service-events.txt", OverwritePrompt = true };
+            if (dialog.ShowDialog(this) != DialogResult.OK) return;
+            try { File.WriteAllText(dialog.FileName, live.Text + "\r\n\r\n" + eventText.Text, Encoding.UTF8); } catch (Exception e) { message.Text = e.Message; }
+        };
         save.Click += (_, _) => Save();
         reload.Click += (_, _) => { if (MessageBox.Show(this, "Discard edits and reload?", "Reload", MessageBoxButtons.YesNo) == DialogResult.Yes) LoadSettings(); };
         remove.Click += (_, _) =>
         {
-            if (!loaded || expectedRaw is null || MessageBox.Show(this, "Remove only the saved application configuration? Service observation will disable. No Windows policy/task is changed.", "Remove", MessageBoxButtons.YesNo) != DialogResult.Yes) return;
+            if (!loaded || expectedRaw is null || MessageBox.Show(this, "Remove only saved configuration? Monitoring will disable. No OS policy/task is changed.", "Remove", MessageBoxButtons.YesNo) != DialogResult.Yes) return;
             try { AdminSettingsStore.Remove(expectedRaw); LoadSettings(); } catch (Exception e) { message.Text = e.Message; }
         };
-        Shown += (_, _) => { LoadSettings(); RefreshLive(); refresh.Start(); };
-        refresh.Tick += (_, _) => RefreshLive();
+        Shown += (_, _) => { LoadSettings(); RefreshLive(); refresh.Start(); }; refresh.Tick += (_, _) => RefreshLive();
         FormClosed += (_, _) => { refresh.Stop(); refresh.Dispose(); };
     }
     private void LoadSettings()
     {
         try
         {
-            var r = AdminSettingsStore.Read(); expectedRaw = r.Raw; enabled.Checked = r.Settings.MonitoringRequested;
-            dry.Checked = r.Settings.DryRun; debug.Checked = r.Settings.Debug; timeout.Value = r.Settings.LockedTimeoutSeconds; exclusions.Lines = r.Settings.ExcludedSids;
-            loaded = true; save.Enabled = true; remove.Enabled = expectedRaw is not null; message.Text = "Loaded saved settings; check service report below for effective state.";
+            var r = AdminSettingsStore.Read(); expectedRaw = r.Raw; enabled.Checked = r.Settings.MonitoringRequested; dry.Checked = r.Settings.DryRun;
+            permit.Checked = r.Settings.AllowLiveLogoff; debug.Checked = r.Settings.Debug; timeout.Value = r.Settings.LockedTimeoutSeconds; exclusions.Lines = r.Settings.ExcludedSids;
+            loaded = true; save.Enabled = true; remove.Enabled = expectedRaw is not null; message.Text = "Saved settings loaded. Check verified service mode before testing.";
         }
         catch (Exception e) { loaded = false; save.Enabled = false; remove.Enabled = false; message.Text = "Settings blocked: " + e.Message; }
     }
@@ -65,11 +69,10 @@ internal sealed class AdminForm : Form
         if (!loaded) return;
         try
         {
-            var s = new AdminSettings { MonitoringRequested = enabled.Checked, DryRun = dry.Checked, Debug = debug.Checked, LockedTimeoutSeconds = decimal.ToInt32(timeout.Value),
-                ExcludedSids = exclusions.Lines.Select(v => v.Trim()).Where(v => v.Length > 0).ToArray() };
-            s.Validate();
-            var text = $"Save to {AdminSettingsStore.DisplayPath}?\nMonitoring={s.MonitoringRequested}, DryRun={s.DryRun}, Debug={s.Debug}, Timeout={s.LockedTimeoutSeconds}s\nExclusions:\n{string.Join("\n", s.ExcludedSids)}\nInstalled service may reload observation. NO live actions exist in this build.";
-            if (MessageBox.Show(this, text, "Confirm save", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
+            var s = new AdminSettings { MonitoringRequested = enabled.Checked, DryRun = dry.Checked, AllowLiveLogoff = permit.Checked, Debug = debug.Checked, LockedTimeoutSeconds = decimal.ToInt32(timeout.Value), ExcludedSids = exclusions.Lines.Select(v => v.Trim()).Where(v => v.Length > 0).ToArray() }; s.Validate();
+            var warning = s.AllowLiveLogoff && !s.DryRun ? "LIVE LOGOFF AUTHORIZED: eligible locked users may be forcibly signed out; unsaved work can be lost. No countdown warning exists yet. Use a safe test account." : "No live logoff authorized by these settings.";
+            var text = $"{warning}\nSave to {AdminSettingsStore.DisplayPath}?\nMonitoring={s.MonitoringRequested}, DryRun={s.DryRun}, LivePermit={s.AllowLiveLogoff}, Debug={s.Debug}, Timeout={s.LockedTimeoutSeconds}s\nExclusions:\n{string.Join("\n", s.ExcludedSids)}";
+            if (MessageBox.Show(this, text, "Confirm machine settings", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
             AdminSettingsStore.Save(s, expectedRaw); LoadSettings(); RefreshLive();
         }
         catch (Exception e) { message.Text = "Not saved: " + e.Message; }
@@ -78,12 +81,13 @@ internal sealed class AdminForm : Form
     {
         try
         {
-            var r = ServiceReportStore.ReadVerified();
+            var r = ServiceReportStore.ReadVerified(); var c = r.Configuration;
             var hash = expectedRaw is null ? null : Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(expectedRaw)));
-            var c = r.Configuration;
-            live.Text = $"SERVICE REPORT (protected registry + SCM PID/start-time/freshness checked)\r\nRun: {r.RunId}  Report UTC: {r.ReportedUtc:O}\r\nMode: {c?.Mode}  Observation: {c?.Enabled}  Effective dry-run: {c?.DryRun}  Timeout: {c?.TimeoutSeconds}s\r\nObserved revision: {c?.ObservedRevision}\r\nMatches editor-loaded saved revision: {hash == c?.ObservedRevision} (unsaved edits are not applied)\r\n" + string.Join("\r\n", r.RecentEvents ?? []);
+            live.Text = $"VERIFIED SERVICE REPORT: {r.ReportedUtc:O} UTC\r\nRun: {r.RunId} Mode: {c?.Mode} Monitoring: {c?.Enabled} Effective dry-run: {c?.DryRun} Timeout: {c?.TimeoutSeconds}s\r\nObserved revision: {c?.ObservedRevision}\r\nMatches editor-loaded saved revision: {hash == c?.ObservedRevision}; unsaved edits are not applied.";
+            eventGroup.Text = "Recent Service Events (last 24, verified fresh report; not Event Viewer)";
+            var text = string.Join("\r\n", r.RecentEvents ?? []); if (eventText.Text != text) eventText.Text = text;
         }
-        catch (Exception e) { live.Text = "NO VERIFIED FRESH SERVICE REPORT: " + e.Message + "\r\nSaved settings alone do not prove active monitoring."; }
+        catch (Exception e) { live.Text = "NO VERIFIED FRESH SERVICE REPORT: " + e.Message; eventGroup.Text = "Recent Service Events - LAST SNAPSHOT ONLY; current report unavailable/stale"; }
         try { sessions.DataSource = SessionReader.ReadAll().Select(s => new { s.Id, s.Kind, s.Account, s.ConnectionStateName, s.LockState, s.Error }).ToArray(); }
         catch (Exception e) { sessions.DataSource = null; message.Text = "Session read failed: " + e.GetType().Name; }
     }

@@ -1,67 +1,40 @@
-<!-- Created: 2026-10-15 10:43; Updated: 2026-10-15 10:58 America/Los_Angeles | Path: /VALIDATION.md | Repository: mjpcomp/locked-session-logoff | Owner: maintainers | Permissions: public read/maintainer write | Purpose: sanitized validation evidence and next implementation gate | Arguments: none | Usage: read alongside README.md, TASKS.md, SERVICE.md and ADMIN.md; distinguish reported evidence from independent verification -->
-# Validation checkpoint
+<!-- Updated: 2026-10-15 12:13 America/Los_Angeles | Path: /VALIDATION.md | Owner: maintainers | Permissions: public read/maintainer write | Purpose: sanitized cumulative validation evidence | Arguments: none | Usage: distinguish supplied evidence, reports and untested new paths -->
+# Validation record
 
-## 2026-10-15 10:58: administrator GUI persistence
+## Foundation and standalone diagnostics
 
-Maintainer reports: GUI test succeeded; settings were changed, saved, and still present after closing and reopening the application. This validates GUI launch and save/reopen persistence on the current x64 test target. Exact artifact hash and CI run were not independently verified; the behavior is consistent with the administrator increment introduced in 74fc1b25fea321086e5c749583ad2b893f1fe3a2.
+At a743d2d, supplied CI logs confirmed x64 compilation with zero compiler warnings/errors and 14/14 core tests. ARM64 compilation was maintainer-reported, not device-tested. Earlier native x64 probe showed Unlocked -> Locked -> Unlocked with stable diagnostic identity and no user-session error. Listener classification was then corrected.
 
-- [x] GUI launch, maintainer-reported success.
-- [x] Configuration edited and saved, maintainer-reported success.
-- [x] Close/reopen preserved saved settings, maintainer-reported success.
-- [ ] UAC rejection behavior and no-write-on-launch independently exercised.
-- [ ] Standard-user write denial on configuration key.
-- [ ] Invalid/duplicate SID, corrupted/unknown settings and concurrent-editor tests.
-- [ ] Remove/cancel behavior and preservation of unrelated registry data.
-- [ ] ARM64 GUI execution.
+Service-host console output supplied 2026-10-15: layout self-check passed; Locked -> WouldLogOff approximately 20.07 seconds later -> Unlocked. A subsequent lock ended approximately 6.02 seconds later without a false timeout; it did not immediately inherit an expired earlier timer. Full fresh-threshold relock was not shown. Console polling cannot prove transitions between snapshots.
 
-The existing service does not consume these saved settings. Persistence is not applied monitoring/enforcement and does not validate configuration ACLs. No raw account details, paths, exclusion SIDs or settings values are retained here.
+Administrator GUI: maintainer reported launch, edit/save and close/reopen persistence. Artifact provenance was consistent with 74fc1b2 but exact GUI artifact hash was not independently inspected. UAC rejection, corruption and standard-user write tests were not thereby established.
 
-## 2026-10-15: x64 console dry-run
+## Configuration bridge
 
-Evidence: maintainer pasted output from the self-contained service-host x64 diagnostic on the Windows 11 x64 deployment target. The transcript does not identify the artifact's exact commit/hash; it is consistent with the documented service-host increment introduced in c6abed0c24af74de83f5bca44194bf623b7a5b40. No independent artifact provenance verification is claimed.
+Supplied output at the configured observer stage showed debug true/false/true reload; enablement from saved settings; 20-second locked timeout with WouldLogOff about 20.05 seconds later; unlock; reload of timeout to 200 seconds without process restart; subsequent disable. No full 200-second timer test was shown. This validates console consumption only, not native service/IPC security.
 
-Commands exercised from the extracted package:
+## Installed service package 299e347
 
-```powershell
-.\LockedSessionLogoff.Service.exe --self-check
-.\LockedSessionLogoff.Service.exe --console --observe-seconds 20
-```
+Maintainer reported all builds passed after redundant threading package reference was removed. Package.json and installation baseline identified 299e3471e5e92f93ab386e5bb334c2b0377d9605. Supplied output showed preview, successful install, owned files/rollback record and running service. Native SCM SessionLock/SessionUnlock events, Locked/Unlocked and WouldLogOff were recorded in the service report, with GUI-saved 20-second configuration accepted and later disabled. WouldLogOff appeared about 22 seconds after observed Locked, not an exact deadline guarantee.
 
-Observed results:
+The report was retrieved through PowerShell; this alone does not establish that the GUI's ACL/PID/start/freshness verification passed. Recent events were initially hard to find; no Event Viewer/persistent logging existed. New UI addresses discoverability but requires validation.
 
-- Native layout self-check passed without starting a service.
-- Unlocked -> Locked -> WouldLogOff -> Unlocked sequence observed.
-- WouldLogOff occurred approximately 20.07 seconds after observed Locked.
-- No second WouldLogOff appeared during the remaining long locked interval.
-- A later lock ended after approximately 6.02 seconds, without WouldLogOff during that short interval.
-- The later lock did not immediately inherit the prior expired timer.
-- All reported events were DryRun=true and Enabled=true.
-- The console returned to the shell without an error shown.
+## Uninstall and baseline restoration, 2026-10-15
 
-These results validate one-device snapshot/timer integration and are consistent with unlock reset. They do not prove a complete fresh-threshold relock cycle, transitions between polling samples, service-delivered events, or real action execution. No user names, machine names, local paths, raw logon identities or original output are retained here.
+Supplied baseline indicated Protocol 1, HadConfig true, Installed phase and commit 299e347. Unsigned script was initially blocked. An explicit child PowerShell invocation with process-only ExecutionPolicy Bypass ran preview and then confirmed uninstall. No permanent policy change was requested in the instructions; enforced group policy cannot be overridden by that option.
 
-## Prior evidence
+Post-uninstall supplied checks:
 
-- At a743d2d1cd29acc71b5efbcea80cdd00f9ddc069, supplied CI output confirmed x64 compilation with zero compiler warnings/errors and all 14 synthetic tests passing. ARM64 compilation was maintainer-reported; its log was not inspected.
-- The earlier native x64 console probe showed Unlocked -> Locked -> Unlocked with stable diagnostic identity and no user-session error. Listener classification was subsequently corrected in source.
+- ServicePresent: false.
+- InstallDirectoryPresent: false.
+- RecoveryDirectoryPresent: false.
+- RuntimeKeyPresent: false.
+- OriginalConfigurationRestored: true, exact case-sensitive string comparison to captured pre-install value.
 
-## Remaining integration and safety gates
+This is a successful tested uninstall/restoration path, not proof of interruption/modified-file/adversarial recovery. User remains uninstalled awaiting next package. Raw paths, usernames, machine names, SIDs, run IDs, original config and raw logs are deliberately omitted.
 
-- [ ] Full fresh-threshold relock cycle on a real device.
-- [ ] Multiple interactive users, session-ID reuse and rapid transitions.
-- [ ] Service installed/running under service identity; SCM session/power notifications.
-- [ ] Sleep/hibernate/disconnect/reconnect recovery and event/poll ordering.
-- [ ] Protected serialized configuration writes, service reload and effective-revision/status acknowledgment.
-- [ ] Token/SID/logon identity, exclusions and final pre-action checks.
-- [ ] Actual logoff, idle-lock helper, secure IPC and recovery.
-- [ ] Secure installer/uninstaller and original-state ledger.
-- [ ] Profile/task features, central reporting/server/authentication and remote commands.
-- [ ] ARM64 device execution.
+## New increment not yet validated
 
-## Next increment
+SID/token identity, actual SID exclusions, final candidate checks, live permit/logoff, new events GUI, and new native/CI tests are source additions only until explicitly verified. Prior successes do not transfer to them. Synthetic tests never invoke native logoff. Native request acceptance is not confirmation of completed logoff.
 
-Connect service-side validated configuration consumption and effective revision/status to the administrator utility. Show saved intent separately from applied state. Invalid/missing/untrusted settings must leave monitoring disabled; unchanged settings must not continuously reset timers. Serialize writes and verify configuration access controls before any enforcement consumer. Add explicit settings validation/reload/failure tests.
-
-Keep live lock/logoff unavailable until secure installation, token identity, exclusions and final-state checks are implemented. Installation must not activate monitoring or maintenance; an existing saved MonitoringRequested value must not silently turn a newly installed/upgraded service into enforcement. Define and acknowledge that transition explicitly. Runtime dry-run/debug remain requirements for the same eventual functional build.
-
-Planning sources: README.md, TASKS.md, IDLE-LOCK.md, INTEGRATION.md, SERVICE.md, ADMIN.md, SERVER-PLAN.md, BRANDING.md. Consolidate README/TASKS links and historical source-status paragraphs in the next implementation increment. Do not repeat passed tests without relevant changes. Keep source/compiled/synthetic-tested/device-tested distinct. This documentation update changes no executable or workstation setting.
+Next: new CI, clean installed dry-run and SID exclusion tests, visible event Copy/Export, then optional authorized safe-account live test and lifecycle restoration. Keep all work saved before enabling live. Existing installer is first-install only; no overwrite upgrade. See SERVICE-INTEGRATION.md and TASKS.md for current behavior, residual race/installer limitations and full pending scope.
