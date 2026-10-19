@@ -1,38 +1,39 @@
-<!-- Updated: 2026-10-15 15:48 America/Los_Angeles | Path: /TASKS.md | Owner: maintainers | Permissions: public read/maintainer write | Purpose: outcome implementation checkpoint and scoped validation | Arguments: none | Usage: separate source/CI/synthetic/device/operator evidence -->
+<!-- Updated: 2026-10-19 13:32 America/Los_Angeles | Path: /TASKS.md | Owner: maintainers | Permissions: public read/maintainer write | Purpose: live-test checkpoint and preview regression gate | Arguments: none | Usage: distinguish direct/operator/source/CI/device evidence -->
 # Current implementation tracker
 
-## Completed prior workstation rounds
+## Completed scoped evidence
 
-SID-aware ordinary dry-run lifecycle: [VALIDATION-386df4b.md](VALIDATION-386df4b.md), including terminal verification of original baseline restoration.
+[SID-aware round](VALIDATION-386df4b.md), earlier [foundation/configuration](VALIDATION.md). Diagnostics 8c802fd: supplied verified reports established cross-restart history/run markers/disabled state/friendly missing settings/inactive timeout/both-absent display. Export and closeout operator-confirmed; final removal checks were not pasted for that earlier round.
 
-Diagnostics increment 8c802fd: supplied verified GUI reports directly showed history across a service restart, distinct run identities and stop/start markers, monitoring remaining disabled, friendly missing-settings state, inactive timeout and both-absent revision wording. Operator explicitly confirmed successful file export and remaining closeout completion. Final removal/baseline checks were not pasted for that round; record operator confirmation separately from direct verification. Binary hashes/CI runs were not independently inspected. Working machine remains uninstalled.
+[Live/outcome/PowerShell laptop checkpoint](VALIDATION-f6af81c.md): supplied dry-run, explicit live request, SessionLogoff, same-action target-absence observation and new sign-in; final disable; independent 475-file check with zero missing/mismatched; original normal Windows PowerShell uninstall and DIRECT final verification of service/files/recovery/runtime absence and baseline restoration. Exact shell build/artifact hashes/CI runs not independently inspected. No blanket production/security claim.
 
-## New outcome increment: source present, build/device tests pending
+Old Windows PowerShell -WhatIf uninstall FAILED with false modified-file indication; never count it as passed. Preview-sensitive read path strongly implicated, exact helper behavior not independently reproduced on device. Both test laptop and working machine currently uninstalled. ARM64 device testing deferred until an available Surface Pro; cross-publication is not device execution.
 
-- Injectable backend shared by service action path and synthetic fake-backend tests.
-- Revalidation of current configuration/eligibility at action boundary; dry-run cannot invoke backend.
-- Action IDs, request failure/acceptance, identity-bound pending observations, distinct target-absent/replaced observations and 30-second unconfirmed deadline.
-- Pending observation continues when monitoring is disabled; stop/power/gaps abandon without claiming completion.
-- One live attempt per token/logon identity per service run, maximum 128; no automatic destructive retries.
-- CI runs new action/outcome tests in both publication jobs; x64 native smoke remains disabled and never tests real logoff.
+## New fix: source present, CI/device pending
+
+- Read-only .NET SHA256 helper works independently of WhatIf-sensitive PowerShell provider helpers.
+- Unavailable digest / invalid manifest digest distinguished from real mismatch; genuine mismatch still blocks before changes.
+- Only read-only CIM query/import locally suppresses inherited WhatIf; outer removal gate unchanged.
+- Explicit Windows PowerShell 5.1 AND PowerShell 7 CI lifecycle regression: known hash, inherited WhatIf, unavailable hash, no-mutation previews, deliberate mismatch rejection/restoration, disabled restart/history and real uninstall/baseline restoration. Fixtures only on disposable CI runner.
+- No C# service/live policy/default or network changes.
 
 ## Next gate
 
-Commit approved source, verify CI and x64 packaging. Operator-selected spare Windows 11 x64 laptop is ready. Short dry-run sanity check, then ONE explicitly authorized live test with all work saved and no other users at risk, lost-work warning reviewed, inspect acceptance/outcome IDs, disable/clear permit, export, uninstall and verify captured baseline. Do not deploy to working machine. ARM64 Surface Pro device testing deferred until available at home; compilation alone does not establish native ARM64 behavior.
+Approve commit, inspect CI including BOTH shell lifecycle steps. Then one short Windows PowerShell 5.1 laptop packaging check with monitoring/live OFF: clean install, successful uninstall preview leaving service/files/config intact, actual uninstall and baseline verification. No repeat live logoff or full SID timing round required. Remain uninstalled until fresh package passes CI.
 
 ## Remaining scope
 
-- New code build/synthetic/CI/device results and actual live outcome evidence.
-- Countdown/warning UX before shared-workstation readiness; no countdown exists now.
-- Full session/token reuse, simultaneous users, unknown/disconnected/unlock/config/ACL/concurrency adversarial tests; diagnostics corruption/retention/power-loss tests.
-- Transactional audit/outcome ledger and crash/restart reconciliation; bounded diagnostics are not that ledger.
+- New preview fix CI/device results; broader failure/corruption/retention/permission tests.
+- Countdown/warning UX before shared-workstation readiness; none exists now.
+- Full session/token reuse, simultaneous users, unknown/disconnected/unlock/config/ACL/concurrency adversarial tests.
+- Transactional audit/outcome ledger, crash/restart reconciliation; bounded diagnostics are not that ledger.
 - Interrupted install/removal, retry/recovery/upgrade/reparse/race hardening.
-- Idle-lock helper, authenticated IPC, supervision and suspend/reconnect semantics.
+- Idle-lock helper/authenticated IPC/supervision/suspend-reconnect semantics.
 - Profile inventory/guarded deletion/native retention policy/baseline reversal.
-- Owned restart/shutdown scheduling and DST/missed-run/collision/reversal tests.
-- Ubuntu/Laravel central reporting/auth/scoped groups/roles/privacy/retention/API; later typed commands with replay/expiry/revocation/approval, never arbitrary shell execution.
-- ARM64 device tests, dependency/licensing/signing/release gates, naming/brand and clean repository handoff; old working repository privacy requires separate approval.
+- Owned restart/shutdown scheduling/DST/missed-run/collision/reversal tests.
+- Ubuntu/Laravel reporting/auth/scoped groups/roles/privacy/retention/API; later typed remote commands with expiry/replay/revocation/approval, never arbitrary shell execution.
+- ARM64 native tests, signing/dependency/licensing/release gates; naming/brand/clean repo handoff and separate approval before old repo privacy change.
 
 ## Continuity/security
 
-[Current package guide](SERVICE-INTEGRATION.md), [earlier validation](VALIDATION.md), [server](SERVER-PLAN.md), [branding](BRANDING.md), [idle-lock](IDLE-LOCK.md). Older README/incremental guides are historical; current tracker/guide govern this package. Read actual source or commit patches, not SHA metadata as file content. Preserve date/path/owner/permissions/purpose/arguments/usage. Never publish account/machine/organization identifiers or raw operator logs. Monitoring/live permission off by default; no network listeners, arbitrary commands or automatic deployment introduced.
+[Current guide](SERVICE-INTEGRATION.md), [server](SERVER-PLAN.md), [branding](BRANDING.md), [idle-lock](IDLE-LOCK.md). Older incremental guides/README are historical where superseded. Read real source/patches, not SHA metadata as content. Preserve dates/path/owner/permissions/purpose/arguments/usage; no public account/machine/organization identifiers or raw operator logs. Public source changes install nothing on operator devices. Monitoring/live authorization off by default; no network listener or remote deployment introduced.

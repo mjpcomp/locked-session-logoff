@@ -1,7 +1,7 @@
-# Updated: 2026-10-15 15:48 America/Los_Angeles
+# Updated: 2026-10-19 13:32 America/Los_Angeles
 # Path: .github/workflows/integrated.yml; Owner: maintainers
-# Permissions: contents read; Purpose: fake-backend outcome tests plus disabled lifecycle/retention smoke
-# Arguments: none; Usage: push/PR/manual dispatch; never enables live actions
+# Permissions: contents read; Purpose: application tests and explicit PS5.1/PS7 packaging regressions
+# Arguments: none; Usage: push/PR/manual; lifecycle fixtures on disposable x64 runner only
 name: Integrated service test bundle
 on: [push, pull_request, workflow_dispatch]
 permissions:
@@ -21,14 +21,14 @@ jobs:
         shell: pwsh
         run: |
           Get-ChildItem src,tests -Recurse -File | Where-Object { $_.Extension -in '.csproj','.manifest' } | ForEach-Object {$null=[xml](Get-Content $_.FullName -Raw)}
-          Get-ChildItem packaging -Filter *.ps1 | ForEach-Object {$tokens=$null;$errors=$null;$null=[Management.Automation.Language.Parser]::ParseFile($_.FullName,[ref]$tokens,[ref]$errors);if($errors.Count){throw ($errors | Out-String)}}
+          Get-ChildItem packaging,tests -Filter *.ps1 -Recurse | ForEach-Object {$tokens=$null;$errors=$null;$null=[Management.Automation.Language.Parser]::ParseFile($_.FullName,[ref]$tokens,[ref]$errors);if($errors.Count){throw ($errors | Out-String)}}
       - name: Core tests
         run: dotnet run --project tests/LockedSessionLogoff.SelfTests -c Release
       - name: Configuration tests
         run: dotnet run --project tests/LockedSessionLogoff.ConfigurationTests -c Release
-      - name: Identity/eligibility tests (no real actions)
+      - name: Identity/eligibility tests
         run: dotnet run --project tests/LockedSessionLogoff.EligibilityTests -c Release
-      - name: Diagnostics tests (no external state)
+      - name: Diagnostics tests
         run: dotnet run --project tests/LockedSessionLogoff.DiagnosticsTests -c Release
       - name: Action/outcome tests (fake backend only)
         run: dotnet run --project tests/LockedSessionLogoff.ActionTests -c Release
@@ -42,28 +42,20 @@ jobs:
           Copy-Item packaging/*.ps1 artifacts/package/
           Copy-Item SERVICE-INTEGRATION.md artifacts/package/
           @{Runtime='${{ matrix.runtime }}';Commit='${{ github.sha }}'} | ConvertTo-Json | Set-Content artifacts/package/package.json
-      - name: x64 disabled install/restart/history/uninstall smoke test
+      - name: x64 native layout check
         if: matrix.runtime == 'win-x64'
         shell: pwsh
         run: |
           & ./artifacts/package/service/LockedSessionLogoff.Service.exe --self-check
           if($LASTEXITCODE){exit $LASTEXITCODE}
-          & ./artifacts/package/Install.ps1 -Confirm:$false
-          try {
-            Start-Sleep -Seconds 5
-            if((Get-Service LockedSessionLogoff).Status -ne 'Running'){throw 'Service not running'}
-            $r=(Get-ItemProperty 'HKLM:\SOFTWARE\LockedSessionLogoff.Runtime').StatusV1 | ConvertFrom-Json
-            $c=(Get-ItemProperty 'HKLM:\SOFTWARE\LockedSessionLogoff').ConfigurationV1 | ConvertFrom-Json
-            if($r.Configuration.Enabled -ne $false -or $c.AllowLiveLogoff -eq $true){throw 'Installation activated monitoring/live permit'}
-            if(@($r.RetainedEvents).Count -lt 1){throw 'No retained diagnostics'}
-            $oldRun=$r.RunId
-            Restart-Service LockedSessionLogoff
-            Start-Sleep -Seconds 5
-            $r=(Get-ItemProperty 'HKLM:\SOFTWARE\LockedSessionLogoff.Runtime').StatusV1 | ConvertFrom-Json
-            if($r.RunId -eq $oldRun -or $r.Configuration.Enabled -ne $false){throw 'Restart identity/disabled state incorrect'}
-            if(@($r.RetainedEvents | Where-Object RunId -eq $oldRun).Count -lt 1){throw 'Prior run diagnostics lost'}
-          } finally { & ./artifacts/package/Uninstall.ps1 -Confirm:$false }
-          if(Test-Path 'HKLM:\SOFTWARE\LockedSessionLogoff.Runtime'){throw 'Owned runtime/history remains'}
+      - name: Windows PowerShell 5.1 preview/integrity/lifecycle regression
+        if: matrix.runtime == 'win-x64'
+        shell: powershell
+        run: '& ./tests/PackagingLifecycle.ps1 -PackageRoot ./artifacts/package -ExpectedMajor 5'
+      - name: PowerShell 7 preview/integrity/lifecycle regression
+        if: matrix.runtime == 'win-x64'
+        shell: pwsh
+        run: '& ./tests/PackagingLifecycle.ps1 -PackageRoot ./artifacts/package -ExpectedMajor 7'
       - name: Checksums
         shell: pwsh
         run: |

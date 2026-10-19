@@ -1,54 +1,41 @@
-<!-- Updated: 2026-10-15 15:48 America/Los_Angeles | Path: /SERVICE-INTEGRATION.md | Owner: maintainers | Permissions: public read/maintainer write | Purpose: action/outcome test package safety and lifecycle | Arguments: WhatIf/RestoreOriginalConfiguration | Usage: controlled test laptop only for live sign-out; first-install only -->
-# Identity-bound logoff outcome test bundle
+<!-- Updated: 2026-10-19 13:32 America/Los_Angeles | Path: /SERVICE-INTEGRATION.md | Owner: maintainers | Permissions: public read/maintainer write | Purpose: dual-shell preview-fix test bundle guide | Arguments: WhatIf/RestoreOriginalConfiguration | Usage: first-install only, no live repeat required -->
+# PowerShell preview compatibility test bundle
 
-## Scope and status
+## What changed / what did not
 
-New source adds an injected action coordinator, fake-backend tests and bounded observation after an accepted native request. Build/CI/device results for this increment are pending. Source is not a production release or proof of successful live sign-out. Windows 11 x64 spare laptop is the immediate operator-selected target; working workstation remains uninstalled. Native ARM64 testing is deferred to an available Surface Pro later; cross-publication is not device validation.
+New uninstaller computes SHA256 using a read-only .NET file stream rather than preview-sensitive Get-FileHash helper behavior. It distinguishes unavailable hashing/invalid manifest digests from genuine file mismatches. Only the read-only CIM query/import runs with locally suppressed inherited WhatIf, avoiding alias-import preview interference. The outer ShouldProcess gate is unchanged and still guards service deletion, registry restoration and file removal. No global disabling of WhatIf or integrity bypass. New fix CI/device results remain pending.
 
-Monitoring starts OFF, dry-run ON, and live permit OFF. No remote deployment/live action is performed by committing source. Existing SID exclusions, final native identity/state checks, startup OFF/ON activation and conservative power/gap/error disarming remain. No idle-lock helper, countdown dialog, profile cleanup, maintenance tasks, network reporting or remote commands exist.
+Application/live behavior is unchanged. Monitoring defaults OFF, dry-run ON, AllowLiveLogoff OFF. Do not repeat live sign-out for this packaging fix. Prior controlled laptop evidence is in VALIDATION-f6af81c.md; old PS5 preview failed although original normal uninstall/restoration passed.
 
-## Action and outcome semantics
+## CI coverage
 
-WouldLogOff never invokes the injected backend. Live requires effective enabled mode, current requested monitoring, unchanged raw configuration and matching observed hash/timeout, eligible current locked state, matching SID/authentication-LUID/session/WTS generation, live-capable service, saved AllowLiveLogoff true and Dry-run false. Restricted writer mutex still coordinates GUI edits with final reads/native request; privileged direct registry edits do not participate. There is no atomic lock-state-conditional Windows logoff API, so a narrow final-check/native-call race remains.
+Disposable elevated x64 runner executes the packaging lifecycle separately under native Windows PowerShell 5.1 and PowerShell 7. Fixtures test a known SHA256 with inherited WhatIf, unavailable hash reporting, no-change install/uninstall previews, deliberate installed-file mismatch rejection followed by exact fixture restoration, disabled restart/history retention, real uninstall and original baseline restoration. Tests never enable monitoring/live and refuse ordinary operator-workstation execution. ARM64 is cross-published, not device-tested. Passing CI is not proof of full interruption/reparse/concurrency/upgrade hardening.
 
-Live attempts receive random action IDs. LogoffRequestAccepted means backend returned without error, NOT completed sign-out. LogoffRequestFailed records exception type or Win32 code without sensitive exception message. No automatic destructive retry: one live attempt per token/logon identity per service run, even after failure or unlock/relock. Maximum 128 attempted identities per run; reaching capacity blocks further attempts. Restart plus explicit OFF/ON can permit a deliberate new test; do not use it as an unattended retry mechanism.
+## Targeted laptop check after CI passes
 
-For an accepted request, the service observes pending targets even when monitoring is subsequently disabled. Successful enumeration without the session produces LogoffTargetAbsentObserved. A different actual token identity at the same session number produces LogoffTargetIdentityReplacedObserved. These describe observations after the request, not causal proof that the request alone ended the session. Disconnection, unknown state/token/read error, an empty user identity or an unchanged target are NOT successful completion. At a monotonic 30-second observation deadline the result is LogoffOutcomeUnconfirmed. Late observations do not retroactively confirm within the deadline. A remaining empty login-shell session may therefore produce Unconfirmed despite a user-observed sign-out; record that honestly.
+No current installation should remain. Wait for application tests, BOTH shell lifecycle steps, x64 self-check and packaging to pass. Extract fresh integrated-test-win-x64; inspect package.json/checksums. Unsigned hashes are not code signing. Do not mix scripts from older packages or edit installed files/manifests.
 
-Stop, power events or observation gaps abandon pending outcomes as Unconfirmed with reason. Pending operations are not resumed across service restart and never trigger repeat native requests. Abrupt crash may leave acceptance without a terminal outcome; this is not a transactional audit ledger. SCM logoff notifications are diagnostic only because session number alone does not identify the original logon.
-
-## Diagnostics retained from previous increment
-
-Existing protected runtime StatusV1 retains at most 128 events / 32 KiB serialized UTF-8 history, with Run IDs and start/normal-stop markers. Current-run queue is 24 events; whole report bounded to 64 KiB. Older events are evicted. Malformed previous history resets with visible warning. No new disk log location; no cryptographic/crash-proof audit promise. Live report still verifies ACL, freshness, SCM PID/process start; historic lines are not current state. Copy/Export saves displayed snapshot; user-chosen exports survive uninstall. Missing settings has friendly inactive wording, inactive timeout and explicit both-absent revisions.
-
-## Controlled laptop procedure after CI passes
-
-Wait for all tests, x64 disabled lifecycle smoke and packaging. Fully extract fresh integrated-test-win-x64; inspect package.json/checksums (unsigned hashes are not signing). Close old GUIs. Do not overwrite earlier installations.
-
-From elevated native PowerShell 7 at package root:
+Use elevated native 64-bit Windows PowerShell 5.1 on the spare laptop. Confirm [Environment]::Is64BitProcess is True. At package root:
 
 ```powershell
-& "$PSHOME\pwsh.exe" -NoProfile -ExecutionPolicy Bypass -File .\Install.ps1 -WhatIf
-& "$PSHOME\pwsh.exe" -NoProfile -ExecutionPolicy Bypass -File .\Install.ps1
+& "$PSHOME\powershell.exe" -NoProfile -ExecutionPolicy Bypass -File .\Install.ps1 -WhatIf
+& "$PSHOME\powershell.exe" -NoProfile -ExecutionPolicy Bypass -File .\Install.ps1
 & "$env:ProgramFiles\LockedSessionLogoff\admin\LockedSessionLogoff.Admin.exe"
 ```
 
-Process-only ExecutionPolicy Bypass does not override enforced MachinePolicy/UserPolicy; use authorized policy/signing handling if blocked.
-
-1. Keep Allow LIVE unchecked. Verify disabled/effective dry-run true. Set 20-second timeout, no exclusion for the intended test account, Dry-run checked; save OFF then ON. Lock about 30 seconds, unlock and inspect WouldLogOff. Disable afterward.
-2. ONLY on the spare laptop, with all work saved and no other users' sessions at risk, explicitly choose a live test. Account used must be authorized to sign out. No user-facing countdown exists.
-3. Set a comfortable 60-second timeout, check Allow LIVE, uncheck Dry-run, enable monitoring and review GUI's lost-unsaved-work confirmation. Verify ConfiguredLiveLogoff/effective dry-run false before locking. Do not turn this on on the working workstation.
-4. Lock and allow the timeout. If actually signed out, sign back in and immediately disable monitoring, clear Allow LIVE and save. Export retained events. Correlate acceptance and terminal observation using action ID. If Unconfirmed/failed/no actual sign-out, do not keep retrying; export the evidence and disable live.
-5. Close GUI, capture this installation's baseline, preview/remove, verify service/install/recovery/runtime absent and original configuration restored. No need to recreate settings if removed.
+Verify fresh disabled status, effective dry-run true and Allow LIVE unchecked. Keep monitoring OFF. Close GUI, capture THIS installation's baseline and run preview:
 
 ```powershell
 $baseline = Get-Content "$env:ProgramData\LockedSessionLogoff\install.json" -Raw | ConvertFrom-Json
-& "$PSHOME\pwsh.exe" -NoProfile -ExecutionPolicy Bypass -File "$env:ProgramFiles\LockedSessionLogoff\Uninstall.ps1" -RestoreOriginalConfiguration -WhatIf
-& "$PSHOME\pwsh.exe" -NoProfile -ExecutionPolicy Bypass -File "$env:ProgramFiles\LockedSessionLogoff\Uninstall.ps1" -RestoreOriginalConfiguration
+& "$PSHOME\powershell.exe" -NoProfile -ExecutionPolicy Bypass -File "$env:ProgramFiles\LockedSessionLogoff\Uninstall.ps1" -RestoreOriginalConfiguration -WhatIf
 ```
 
-Uninstaller handles service stop/delete; explicit restoration discards test edits and restores captured original ConfigurationV1 (or removes originally absent value). It removes owned status including retained history and only removes recovery state on success; preserve recovery record on any conflict/failure, never blindly delete remnants. User exports remain untouched. First-install only: interruption/reparse/concurrency/race/recovery/upgrade hardening is still pending. Uninstall cannot reverse completed logoff or recover unsaved work.
+Preview should reach the explicit uninstall WhatIf message without false modified-file error. Service must remain running and owned files/recovery/configuration remain. Do not intentionally alter installed files on the laptop; CI owns the mutation fixture. If preview fails, preserve recovery state and report it rather than bypassing guards. If preview passes, run the same uninstall command without -WhatIf, confirm, then verify service/install/recovery/runtime absent and original configuration restored using the captured HadConfig/original value. No manual service stop required. PowerShell 7 uses pwsh.exe instead of powershell.exe. Process-only execution-policy override does not defeat enforced Group Policy.
 
-## Validation boundaries
+## Existing application boundaries
 
-Prior SID-aware round: VALIDATION-386df4b.md. Prior diagnostics source 8c802fd: supplied GUI reports showed retained previous/current run and stop/start markers, monitoring stayed off, friendly missing-settings/Inactive/both-absent displays. Operator explicitly confirmed exported file and closeout completion; final uninstall checks were NOT pasted for that round. Exact artifact hashes were not independently inspected. These prior results do not establish new action/outcome code or live success. Remaining countdown/warning UX, hardening and central/idle/profile/maintenance scope are in TASKS.md and SERVER-PLAN.md.
+Only installed SYSTEM backend can issue live logoff, after activation, unchanged configuration, matching SID/session/authentication LUID/WTS identity, exclusions and locked-state checks plus explicit live permit with dry-run off. No atomic check-to-logoff guarantee; narrow race remains. No countdown UX. Requests carry action IDs; accepted is not completed. Pending observation uses 30-second deadline, target absent/replaced observations or Unconfirmed, including stop/power/gap abandonment. One live attempt per logon identity per service run, maximum 128; no automatic destructive retries, no restart-resumption ledger.
+
+Protected runtime history remains bounded to 128 entries/32 KiB, current queue 24 and full report 64 KiB. Historical runs are labeled; current reports verify ACL/age/SCM PID/process start. Malformed history warns/resets; abrupt crash can lose outcome/context. Not tamper-evident/transactional audit. Copy/Export is user-directed; exports remain outside uninstall ownership. Uninstaller removes owned runtime history, service/files and successful recovery state, restores original ConfigurationV1 or absence; completed actions cannot be undone.
+
+First-install only, no overwrite upgrades. Preserve recovery record on conflicts/partial failures. No idle-lock/profile cleanup/maintenance schedules/network reporting/remote commands yet. Signing/licensing/recovery/upgrade and broader release/security gates remain in TASKS.md and SERVER-PLAN.md.
