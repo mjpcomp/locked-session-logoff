@@ -1,52 +1,48 @@
-<!-- Created: 2026-10-14 17:48 America/Los_Angeles | Path: /IDLE-LOCK.md | Repository: mjpcomp/locked-session-logoff | Owner: maintainers | Permissions: public read/maintainer write | Purpose: additive idle-lock scope and implementation tracker | Arguments: none | Usage: read alongside README.md and TASKS.md before implementation -->
+<!-- Updated: 2026-10-20 09:36 America/Los_Angeles | Path: /IDLE-LOCK.md | Owner: maintainers | Permissions: public read/maintainer write | Purpose: staged idle-lock architecture and read-only observer guide | Arguments: observer self-check / observe idle-seconds | Usage: normal non-elevated local-console session; no enforcement yet -->
 # Optional idle-to-lock stage
 
-## Status and checkpoint
+## Current implementation boundary
 
-Specification only; not implemented. This document supplements README.md and TASKS.md and must be consulted with them. Next documentation maintenance must add explicit links from both files. Foundation commit 934dc785888bed16ac816c71c70bc1d33b72c136 contains timer core, synthetic self-tests, and CI definition only; build results and Windows integration remain unverified here. No installable utility exists.
+First stage is SOURCE ONLY until new CI/device evidence: pure InputIdleTimer, synthetic tests, and standalone LockedSessionLogoff.SessionAgent.exe input observer. Existing service/admin installation and machine configuration are NOT changed. Agent is separately packaged, manually started and read-only; it performs no lock/sign-out requests, writes no configuration, registers no startup task/service, uses no IPC and is not launched/supervised by the service. CLI idle threshold is diagnostic, not authoritative machine policy. SID exclusions/service configuration are not integrated into this observer yet.
 
-## Behavior
+Full idle-lock enforcement, authenticated IPC, launch supervision and user-facing warning/countdown remain unimplemented. The old foundation-only checkpoint is historical; TASKS.md and README.md describe current broader service validation. Do not call WouldLock a real lock or completed idle-lock feature.
 
-Add an independently enabled idle-lock option controlled by the elevated administrator application. Installation leaves it disabled. Configure X minutes of no session input before requesting a lock; configure Y minutes continuously locked before logoff separately. Do not log off directly because the idle threshold expired.
+## Why measure in the user session
 
-Unlocked/no input for X -> request lock -> positively observe actual lock -> start Y-minute locked timer. Manual locks use the same locked timer. Unlock resets locked timing. New input resets idle timing. Unknown input/state, helper failure, or identity mismatch must not be treated as proof of inactivity. Start/restart/unlock/reconfiguration must grant a fresh conservative idle window rather than lock immediately from stale historical data. Define/test suspend/resume semantics.
+GetLastInputInfo reports input only for its calling session, not all users, and input ticks can move backward. This agent refuses elevated administrator/SYSTEM/session-0 execution and only times a positively known active unlocked local Console session. RDP/disconnected/unknown sessions pause/reset; native input or WTS failures do not imply inactivity. It does not record keystrokes, mouse coordinates, window titles, screen content, account names or SID strings to its diagnostic output. The native adapter may query WTS snapshots locally but only the calling session is timed; no network export.
 
-DryRun suppresses idle-lock requests and logoff actions; Debug independently controls detail. A would-lock decision must not fabricate a lock event or start a hypothetical logoff countdown. If a real manual lock occurs during dry-run, the normal locked timer can report would-logoff. Log stage, session, reason, and result without recording keystrokes, mouse coordinates, window titles, or content. Bound logs and retries.
+Startup, changed input tick, unlock, changed logon identity, timeout change, backward uptime, and observation gaps over 10 seconds grant a fresh window rather than using historical idle age for immediate action. 32-bit native tick subtraction handles rollover; future/ambiguous age greater than half the tick range pauses/reset timing conservatively. A changed backward input tick resets rather than extending a guessed old interval. At most one WouldLock per unchanged idle episode. Polling cannot establish every transition between samples, and synthetic input can affect the signal; no mouse-jiggler detection/tamper-proof promise.
 
-## Architecture
+## Standalone test after CI passes
 
-GetLastInputInfo returns input information for the calling session, not all sessions. LockWorkStation requires an interactive-desktop process; success means a request was initiated, not proof of lock. Add LockedSessionLogoff.SessionAgent.exe, a small non-elevated helper in each eligible interactive user session. Use supported service-to-session launch and lifecycle management; never query service session 0 and assume it represents an employee. The service remains authoritative for policy and locked-session logoff.
+Wait for Read-only idle observer workflow, idle tests, x64 layout check and publication. Download idle-observer-win-x64, fully extract and inspect package.json/checksums. This is NOT the integrated-test artifact and contains no installer. Keep the service uninstalled. ARM64 is cross-published only until native Surface Pro testing. Self-contained package requires no SDK/PowerShell 7 on the laptop; no network is used by this command sequence.
 
-Authenticate/authorize IPC, bind connections to actual session/logon identity, reject stale or cross-session reports and replayed requests, validate timestamps, and avoid accepting caller-provided session identity as authority. Protect binaries/configuration and service-side settings from standard users. Do not place service credentials or secrets in helper arguments. Confirm lock through native session events/state before starting the locked timer. Recheck state/input before requesting lock and handle input races conservatively.
+Open NORMAL Windows PowerShell, not Run as Administrator, at the extracted observer directory:
 
-Handle 32-bit input tick rollover and documented non-incremental input timestamps safely. Test local console and define RDP/disconnected-session support explicitly. Supervise helper startup/exit and avoid duplicate agents. Do not promise tamper-proof enforcement: a local administrator can disable the utility, a user may terminate their own helper until supervision restarts it, and synthetic input may prevent an input-idle threshold. No keylogging or mouse-jiggler detection is in scope.
+```powershell
+Start-Transcript -Path (Join-Path (Get-Location) ('idle-observer-'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'.txt')) -NoClobber
+& .\LockedSessionLogoff.SessionAgent.exe --self-check | Out-Host
+& .\LockedSessionLogoff.SessionAgent.exe --observe --idle-seconds 20 | Out-Host
+```
 
-Input-idle policy is independent of screensaver/sleep preferences. It does not require changing those settings. Do not silently modify power policies, screensaver settings, or media/presentation exceptions. Viewing video or a presentation without input may count as idle; make the policy explicit. Future exceptions require explicit design, not automatic promises.
+Leave mouse/keyboard untouched for about 25 seconds; expect WouldLock but desktop remains unlocked. Move mouse/type and wait again; expect a new full window then one new WouldLock. Manually lock/unlock; timing should pause while locked and start fresh after unlock, not inherit expired time. Stop with Ctrl+C, then Stop-Transcript. Native executable input activity is not injected by these commands. Keep output private: transcript headers can contain account/machine names even though observer event text does not. Flash-drive round-trip command sheet can be supplied for this distinct package after CI.
 
-## Installation, uninstall, and packaging
+No install/uninstall cycle is required. Stop observer, retain export, then remove its extracted folder if no longer needed. This does NOT uninstall any separate service installation. Do not edit the existing integrated package or run privileged CI fixtures.
 
-Include native x64 and ARM64 helper builds with matching service/admin packages. Installation alone enables no idle-lock enforcement. The admin utility controls enablement, timeout, exclusions, dry-run/debug, and diagnostics. Track helper launch mechanisms as owned changes. Uninstall stops monitoring/agents and removes owned launch mechanisms, binaries, configuration, and logs according to the existing preview/recovery policy. Preserve unrelated tasks/settings and flag conflicts. No change to irreversible-action warnings.
+## Intended later enforcement semantics
 
-## Implementation and acceptance checklist
+Independently enabled administrator-controlled X idle minutes and Y continuously locked minutes; installation leaves both disabled until explicitly enabled. Unlocked/no input for X -> recheck candidate -> request lock in correct user session -> positively observe actual native lock -> start separate Y timer. Manual locks use the same locked-logoff logic. Unlock/input changes reset relevant windows. WouldLock never fabricates lock state or starts a hypothetical logoff countdown. Same build retains runtime DryRun and independent Debug settings.
 
-- [ ] Link this supplement from README.md and TASKS.md in next documentation update.
-- [ ] Extend validated configuration with independent idle-lock enablement and timeout.
-- [ ] Add session agent project, protected deployment, secure launch/lifecycle, and authenticated IPC.
-- [ ] Measure input in the correct session; handle errors, tick rollover, and non-incremental timestamps.
-- [ ] Idle threshold produces lock candidate only; recheck input/state before action.
-- [ ] Verify actual lock before starting locked-logoff timing.
-- [ ] Test new input cancellation, manual lock, unlock/relock, multiple sessions, exclusions, and helper recovery.
-- [ ] Test dry-run: no lock, no simulated locked state, real manual lock still monitored.
-- [ ] Test sleep/resume, service restart, session identity reuse, secure desktop, and remote-session policy.
-- [ ] Admin UI clearly distinguishes X idle minutes and Y locked minutes.
-- [ ] Verify disabled screensaver/sleep does not disable the independent policy.
-- [ ] Test installer/uninstaller agent cleanup and partial-failure recovery.
-- [ ] Build both architectures; validate on real devices separately.
+Service remains authoritative. Supported launch into eligible sessions and authenticated/authorized IPC must bind to actual SID/session/authentication identity, reject stale/replayed/cross-session claims, validate freshness, protect binaries/settings, avoid credentials/secrets in arguments and supervise duplicate/helper exit behavior. Recheck input/state immediately before any future lock request; API acceptance is not proof of lock. Define power, secure-desktop, RDP/disconnection, restart and retry behavior before integrating. User can terminate their own helper until supervised restart; administrators control the local trust boundary.
 
-## Public API references
+Track every owned launch mechanism for uninstall/reversal; preserve unrelated tasks/settings and recovery state on conflicts/partial failures. Publish x64/ARM64 and device-test separately. No silent changes to power policy/screensaver/sleep or presentation/media exceptions: watching video without input can count as idle. Profile/maintenance/server features remain separate opt-ins.
 
-- https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getlastinputinfo
-- https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-lockworkstation
-- https://devblogs.microsoft.com/oldnewthing/20260618-00/?p=112444/
+## Remaining acceptance gates
 
-No organization-specific information or private support correspondence belongs in this document or implementation.
+- New pure tests/CI/layout/build, then real non-elevated observer input/relock/resume tests.
+- Independent validated policy/UI fields, exclusions, authenticated IPC and supervised launch.
+- Native lock requests only after authority/identity/input checks; positive lock confirmation.
+- Multiple sessions/RDP/security/error/replay/race/recovery/installer cleanup tests.
+- Warning/countdown UX and broader release hardening.
+
+Public API basis: https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getlastinputinfo and https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-lockworkstation

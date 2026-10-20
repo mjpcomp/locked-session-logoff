@@ -1,39 +1,35 @@
-<!-- Updated: 2026-10-19 13:32 America/Los_Angeles | Path: /TASKS.md | Owner: maintainers | Permissions: public read/maintainer write | Purpose: live-test checkpoint and preview regression gate | Arguments: none | Usage: distinguish direct/operator/source/CI/device evidence -->
+<!-- Updated: 2026-10-20 09:36 America/Los_Angeles | Path: /TASKS.md | Owner: maintainers | Permissions: public read/maintainer write; Purpose: completed preview gate and next idle-observer increment | Arguments: none | Usage: keep source/CI/device/operator evidence separate -->
 # Current implementation tracker
 
-## Completed scoped evidence
+## Closed targeted Windows PowerShell 5.1 preview gate
 
-[SID-aware round](VALIDATION-386df4b.md), earlier [foundation/configuration](VALIDATION.md). Diagnostics 8c802fd: supplied verified reports established cross-restart history/run markers/disabled state/friendly missing settings/inactive timeout/both-absent display. Export and closeout operator-confirmed; final removal checks were not pasted for that earlier round.
+[0138c6c workstation evidence](VALIDATION-0138c6c.md): supplied transcript explicitly identifies PS5.1.26100.9711, native 64-bit and matching package commit. Install preview/install/uninstall preview/actual uninstall exit 0. Preview kept same running service, monitoring off, configuration/recovery unchanged, 475 files present/matching. Final service/install/recovery/runtime absent and baseline restoration true. No repeat live action requested/performed in this round. Exact binary hashes/CI runs not independently inspected. Both machines remain uninstalled.
 
-[Live/outcome/PowerShell laptop checkpoint](VALIDATION-f6af81c.md): supplied dry-run, explicit live request, SessionLogoff, same-action target-absence observation and new sign-in; final disable; independent 475-file check with zero missing/mismatched; original normal Windows PowerShell uninstall and DIRECT final verification of service/files/recovery/runtime absence and baseline restoration. Exact shell build/artifact hashes/CI runs not independently inspected. No blanket production/security claim.
+Earlier [live/outcome round](VALIDATION-f6af81c.md), [SID round](VALIDATION-386df4b.md), [foundation](VALIDATION.md). Diagnostics 8c802fd cross-run history/friendly state directly shown; export and earlier closeout operator-confirmed. The OLD PS5 preview failure remains historical, not retroactively passed.
 
-Old Windows PowerShell -WhatIf uninstall FAILED with false modified-file indication; never count it as passed. Preview-sensitive read path strongly implicated, exact helper behavior not independently reproduced on device. Both test laptop and working machine currently uninstalled. ARM64 device testing deferred until an available Surface Pro; cross-publication is not device execution.
+## Next functional increment: read-only session idle observer
 
-## New fix: source present, CI/device pending
+Source prepared: pure conservative InputIdleTimer and tests, standalone normal-user local-console SessionAgent, separate Read-only idle observer workflow/artifacts. It only reports WouldLock. NO native lock/logoff requests, IPC, service/installer/config changes, startup tasks or supervision. CLI threshold is diagnostic, not machine policy/exclusion integration. Build/tests/device results pending.
 
-- Read-only .NET SHA256 helper works independently of WhatIf-sensitive PowerShell provider helpers.
-- Unavailable digest / invalid manifest digest distinguished from real mismatch; genuine mismatch still blocks before changes.
-- Only read-only CIM query/import locally suppresses inherited WhatIf; outer removal gate unchanged.
-- Explicit Windows PowerShell 5.1 AND PowerShell 7 CI lifecycle regression: known hash, inherited WhatIf, unavailable hash, no-mutation previews, deliberate mismatch rejection/restoration, disabled restart/history and real uninstall/baseline restoration. Fixtures only on disposable CI runner.
-- No C# service/live policy/default or network changes.
+Fresh windows after startup/input/unlock/identity/config/gaps; null/future/ambiguous input or unknown/non-console state pauses/reset. Native input tick rollover and backward values tested synthetically. One candidate per unchanged episode. No keyboard/mouse/window-content logging. This is phase one toward authenticated per-session idle-lock and warning helper architecture, NOT completed idle-lock enforcement.
 
-## Next gate
+## Immediate gate
 
-Approve commit, inspect CI including BOTH shell lifecycle steps. Then one short Windows PowerShell 5.1 laptop packaging check with monitoring/live OFF: clean install, successful uninstall preview leaving service/files/config intact, actual uninstall and baseline verification. No repeat live logoff or full SID timing round required. Remain uninstalled until fresh package passes CI.
+Approve source, verify new observer CI/tests/x64 layouts. Then standalone idle-observer-win-x64 on laptop in NORMAL non-elevated console: 20-second untouched period -> WouldLock without locking, input reset, manual lock/unlock fresh window, Ctrl+C stop. No install/uninstall or live logoff required. Supply another flash-drive command sheet once artifact exists. ARM64 Surface Pro device test later; cross-publication is not native validation.
 
 ## Remaining scope
 
-- New preview fix CI/device results; broader failure/corruption/retention/permission tests.
-- Countdown/warning UX before shared-workstation readiness; none exists now.
-- Full session/token reuse, simultaneous users, unknown/disconnected/unlock/config/ACL/concurrency adversarial tests.
-- Transactional audit/outcome ledger, crash/restart reconciliation; bounded diagnostics are not that ledger.
-- Interrupted install/removal, retry/recovery/upgrade/reparse/race hardening.
-- Idle-lock helper/authenticated IPC/supervision/suspend-reconnect semantics.
+- New idle source/CI/device results; sleep/resume/native input uncertainties and polling limitations.
+- Validated independent idle policy/UI/exclusions; authenticated identity-bound IPC and supervised launch, real lock request/recheck/confirmation, duplicate/replay/stale/cross-session defenses and ownership cleanup.
+- Warning/countdown UX before shared-workstation readiness.
+- Full token/session reuse, multiple users, unlock/disconnect/config/ACL/concurrency adversarial tests.
+- Diagnostic corruption/retention/power-loss tests and transactional outcome/audit ledger/crash reconciliation.
+- Interrupted installation/removal, retry/recovery/upgrade/reparse/race hardening.
 - Profile inventory/guarded deletion/native retention policy/baseline reversal.
-- Owned restart/shutdown scheduling/DST/missed-run/collision/reversal tests.
-- Ubuntu/Laravel reporting/auth/scoped groups/roles/privacy/retention/API; later typed remote commands with expiry/replay/revocation/approval, never arbitrary shell execution.
-- ARM64 native tests, signing/dependency/licensing/release gates; naming/brand/clean repo handoff and separate approval before old repo privacy change.
+- Owned maintenance tasks, DST/missed-run/collision/warnings/reversal.
+- Ubuntu/Laravel reporting/auth/groups/roles/privacy/retention/API; later typed remote commands with expiry/replay/revocation/approval, never arbitrary shell execution.
+- ARM64 native tests, signing/licensing/dependency/release gates, branding/clean repo handoff and separately approved old-repo privacy.
 
-## Continuity/security
+## Continuity
 
-[Current guide](SERVICE-INTEGRATION.md), [server](SERVER-PLAN.md), [branding](BRANDING.md), [idle-lock](IDLE-LOCK.md). Older incremental guides/README are historical where superseded. Read real source/patches, not SHA metadata as content. Preserve dates/path/owner/permissions/purpose/arguments/usage; no public account/machine/organization identifiers or raw operator logs. Public source changes install nothing on operator devices. Monitoring/live authorization off by default; no network listener or remote deployment introduced.
+[README](README.md), [idle architecture/current standalone guide](IDLE-LOCK.md), [integrated guide](SERVICE-INTEGRATION.md), [server](SERVER-PLAN.md), [branding](BRANDING.md). Integrated guide still documents the independently packaged service lifecycle; it is not the observer launch guide. Preserve date/path/owner/permissions/purpose/arguments/usage. Read actual source/patches, never SHA metadata as content. Public records omit operator identifiers/raw logs. No automatic deployment or silent authority/enforcement changes.

@@ -1,0 +1,50 @@
+# Created: 2026-10-20 09:36 America/Los_Angeles
+# Path: .github/workflows/idle-observer.yml; Owner: maintainers
+# Permissions: contents read; Purpose: pure idle tests and independent read-only observer artifacts
+# Arguments: none; Usage: push/PR/manual; no install or real idle/lock actions in CI
+name: Read-only idle observer
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        runtime: [win-x64, win-arm64]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Idle timer tests
+        run: dotnet run --project tests/LockedSessionLogoff.IdleTests -c Release
+      - name: Guard standalone observer action boundary
+        shell: pwsh
+        run: |
+          $files=Get-ChildItem src/LockedSessionLogoff.SessionAgent -Filter *.cs -Recurse
+          if($files | Select-String -Pattern 'LockWorkStation|WTSLogoffSession|CreateProcessAsUser'){throw 'Action/launch API reference in read-only observer'}
+          $null=[xml](Get-Content src/LockedSessionLogoff.SessionAgent/LockedSessionLogoff.SessionAgent.csproj -Raw)
+      - name: Publish observer
+        shell: pwsh
+        run: |
+          dotnet publish src/LockedSessionLogoff.SessionAgent -c Release -r ${{ matrix.runtime }} --self-contained true -p:PublishTrimmed=false -o artifacts/observer
+          if($LASTEXITCODE){exit $LASTEXITCODE}
+          Copy-Item IDLE-LOCK.md artifacts/observer/
+          @{Runtime='${{ matrix.runtime }}';Commit='${{ github.sha }}';Purpose='ReadOnlyIdleObserver';ActionsEnabled=$false} | ConvertTo-Json | Set-Content artifacts/observer/package.json
+      - name: x64 layouts only
+        if: matrix.runtime == 'win-x64'
+        shell: pwsh
+        run: |
+          & ./artifacts/observer/LockedSessionLogoff.SessionAgent.exe --self-check
+          if($LASTEXITCODE){exit $LASTEXITCODE}
+      - name: Checksums
+        shell: pwsh
+        run: |
+          Get-ChildItem artifacts/observer -File -Recurse | Sort-Object FullName | ForEach-Object { '{0}  {1}' -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash, [IO.Path]::GetRelativePath((Resolve-Path artifacts/observer).Path,$_.FullName) } | Set-Content artifacts/SHA256SUMS.txt
+          Move-Item artifacts/SHA256SUMS.txt artifacts/observer/SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: idle-observer-${{ matrix.runtime }}
+          path: artifacts/observer/
+          if-no-files-found: error
