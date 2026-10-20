@@ -1,7 +1,7 @@
-# Updated: 2026-10-19 13:32 America/Los_Angeles
+# Updated: 2026-10-20 13:32 America/Los_Angeles
 # Path: .github/workflows/integrated.yml; Owner: maintainers
-# Permissions: contents read; Purpose: application tests and explicit PS5.1/PS7 packaging regressions
-# Arguments: none; Usage: push/PR/manual; lifecycle fixtures on disposable x64 runner only
+# Permissions: contents read; Purpose: hosted disabled policy compilation, client tools and dual-shell lifecycle
+# Arguments: none; Usage: disposable x64 install tests never enable monitoring/live
 name: Integrated service test bundle
 on: [push, pull_request, workflow_dispatch]
 permissions:
@@ -32,21 +32,31 @@ jobs:
         run: dotnet run --project tests/LockedSessionLogoff.DiagnosticsTests -c Release
       - name: Action/outcome tests (fake backend only)
         run: dotnet run --project tests/LockedSessionLogoff.ActionTests -c Release
-      - name: Publish service and GUI
+      - name: Agent protocol/policy tests
+        run: dotnet run --project tests/LockedSessionLogoff.AgentPolicyTests -c Release
+      - name: Hosting policy remains disabled tests
+        run: dotnet run --project tests/LockedSessionLogoff.HostedPolicyTests -c Release
+      - name: Idle timer tests
+        run: dotnet run --project tests/LockedSessionLogoff.IdleTests -c Release
+      - name: Publish service, GUI and manual agent tools
         shell: pwsh
         run: |
           dotnet publish src/LockedSessionLogoff.Service -c Release -r ${{ matrix.runtime }} --self-contained true -p:PublishTrimmed=false -o artifacts/package/service
           if($LASTEXITCODE){exit $LASTEXITCODE}
           dotnet publish src/LockedSessionLogoff.Admin -c Release -r ${{ matrix.runtime }} --self-contained true -p:PublishTrimmed=false -o artifacts/package/admin
           if($LASTEXITCODE){exit $LASTEXITCODE}
+          dotnet publish src/LockedSessionLogoff.SessionAgent -c Release -r ${{ matrix.runtime }} --self-contained true -p:PublishTrimmed=false -o artifacts/package/agent-tools
+          if($LASTEXITCODE){exit $LASTEXITCODE}
           Copy-Item packaging/*.ps1 artifacts/package/
-          Copy-Item SERVICE-INTEGRATION.md artifacts/package/
+          Copy-Item SERVICE-INTEGRATION.md,AGENT-POLICY.md artifacts/package/
           @{Runtime='${{ matrix.runtime }}';Commit='${{ github.sha }}'} | ConvertTo-Json | Set-Content artifacts/package/package.json
-      - name: x64 native layout check
+      - name: x64 native layouts only
         if: matrix.runtime == 'win-x64'
         shell: pwsh
         run: |
           & ./artifacts/package/service/LockedSessionLogoff.Service.exe --self-check
+          if($LASTEXITCODE){exit $LASTEXITCODE}
+          & ./artifacts/package/agent-tools/LockedSessionLogoff.SessionAgent.exe --self-check
           if($LASTEXITCODE){exit $LASTEXITCODE}
       - name: Windows PowerShell 5.1 preview/integrity/lifecycle regression
         if: matrix.runtime == 'win-x64'
