@@ -1,0 +1,22 @@
+# Created: 2026-10-20 12:08 America/Los_Angeles
+# Path: .github/workflows/agent-policy.yml; Owner: maintainers
+# Permissions: contents read; Purpose: IPC foundation compile and pure adversarial protocol tests
+# Arguments: none; Usage: no SYSTEM listener, native impersonation or workstation actions started
+name: Agent policy foundation tests
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Agent protocol and policy tests (in-memory only)
+        run: dotnet run --project tests/LockedSessionLogoff.AgentPolicyTests -c Release
+      - name: Existing idle timer regression
+        run: dotnet run --project tests/LockedSessionLogoff.IdleTests -c Release
+      - name: Existing action safety regression (fake backend)
+        run: dotnet run --project tests/LockedSessionLogoff.ActionTests -c Release

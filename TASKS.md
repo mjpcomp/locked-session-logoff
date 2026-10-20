@@ -1,35 +1,31 @@
-<!-- Updated: 2026-10-20 09:36 America/Los_Angeles | Path: /TASKS.md | Owner: maintainers | Permissions: public read/maintainer write; Purpose: completed preview gate and next idle-observer increment | Arguments: none | Usage: keep source/CI/device/operator evidence separate -->
+<!-- Updated: 2026-10-20 12:08 America/Los_Angeles | Path: /TASKS.md | Owner: maintainers | Permissions: public read/maintainer write | Purpose: observer evidence and read-only IPC foundation gate | Arguments: none | Usage: distinguish source/CI/native/device/operator evidence -->
 # Current implementation tracker
 
-## Closed targeted Windows PowerShell 5.1 preview gate
+## Scoped completed rounds
 
-[0138c6c workstation evidence](VALIDATION-0138c6c.md): supplied transcript explicitly identifies PS5.1.26100.9711, native 64-bit and matching package commit. Install preview/install/uninstall preview/actual uninstall exit 0. Preview kept same running service, monitoring off, configuration/recovery unchanged, 475 files present/matching. Final service/install/recovery/runtime absent and baseline restoration true. No repeat live action requested/performed in this round. Exact binary hashes/CI runs not independently inspected. Both machines remain uninstalled.
+[Preview fix](VALIDATION-0138c6c.md): supplied exact PS5.1/package metadata; zero exit previews/install/uninstall, 475 files preserved/matching, recovery/config unchanged and final absence/baseline restoration. [Live/outcome](VALIDATION-f6af81c.md), [SID](VALIDATION-386df4b.md), [foundation](VALIDATION.md). Earlier diagnostics history/friendly state directly shown; export/earlier closeout operator-confirmed.
 
-Earlier [live/outcome round](VALIDATION-f6af81c.md), [SID round](VALIDATION-386df4b.md), [foundation](VALIDATION.md). Diagnostics 8c802fd cross-run history/friendly state directly shown; export and earlier closeout operator-confirmed. The OLD PS5 preview failure remains historical, not retroactively passed.
+[Standalone observer](VALIDATION-2aeffea.md): native layouts pass, WouldLock without automatic lock, manual lock pause/unlock fresh ~20-second window and stop/prompt return directly shown; no-repeat/input-reset/no-automatic-lock details operator-confirmed. Ctrl+C also produced PowerShell pipeline-stopped noise. Use direct long-running native command per AGENT-POLICY.md rather than unnecessary Out-Host pipe. No repeat laptop round needed for that change. Both service installations remain removed; observer stopped.
 
-## Next functional increment: read-only session idle observer
+## New source: IPC foundation, NOT active integration
 
-Source prepared: pure conservative InputIdleTimer and tests, standalone normal-user local-console SessionAgent, separate Read-only idle observer workflow/artifacts. It only reports WouldLock. NO native lock/logoff requests, IPC, service/installer/config changes, startup tasks or supervision. CLI threshold is diagnostic, not machine policy/exclusion integration. Build/tests/device results pending.
+[Contract/security/status](AGENT-POLICY.md): bounded strict read-only framing/challenge/receipt; native local pipe ACL/first-instance/remote rejection; actual client token/PID/WTS binding and installed-service PID/start verification; server-side policy/exclusion filtering and action-disabled replies. Pure in-memory tests and separate CI workflow. No auto-started endpoint or changes to service/agent CLI/installer/configuration. Native peer checks and new tests have NOT yet been executed/validated.
 
-Fresh windows after startup/input/unlock/identity/config/gaps; null/future/ambiguous input or unknown/non-console state pauses/reset. Native input tick rollover and backward values tested synthetically. One candidate per unchanged episode. No keyboard/mouse/window-content logging. This is phase one toward authenticated per-session idle-lock and warning helper architecture, NOT completed idle-lock enforcement.
+## Next engineering gate (no operator test yet)
 
-## Immediate gate
+Approve foundation, verify compile/protocol tests; then wire listener lifecycle/cancellation, independent default-off idle settings and administrator controls, agent service-policy refresh/fresh-window resets, and installed normal-user/negative security tests. Keep idle actions disabled. Only after that integrated package passes CI supply one flash-drive test sheet; avoid a laptop test for every internal substep. Authenticates user/logon, not helper binary or honesty of idle data. Never accept client WouldLock as privileged action authority.
 
-Approve source, verify new observer CI/tests/x64 layouts. Then standalone idle-observer-win-x64 on laptop in NORMAL non-elevated console: 20-second untouched period -> WouldLock without locking, input reset, manual lock/unlock fresh window, Ctrl+C stop. No install/uninstall or live logoff required. Supply another flash-drive command sheet once artifact exists. ARM64 Surface Pro device test later; cross-publication is not native validation.
+## Remaining requirements
 
-## Remaining scope
-
-- New idle source/CI/device results; sleep/resume/native input uncertainties and polling limitations.
-- Validated independent idle policy/UI/exclusions; authenticated identity-bound IPC and supervised launch, real lock request/recheck/confirmation, duplicate/replay/stale/cross-session defenses and ownership cleanup.
-- Warning/countdown UX before shared-workstation readiness.
-- Full token/session reuse, multiple users, unlock/disconnect/config/ACL/concurrency adversarial tests.
-- Diagnostic corruption/retention/power-loss tests and transactional outcome/audit ledger/crash reconciliation.
-- Interrupted installation/removal, retry/recovery/upgrade/reparse/race hardening.
-- Profile inventory/guarded deletion/native retention policy/baseline reversal.
-- Owned maintenance tasks, DST/missed-run/collision/warnings/reversal.
-- Ubuntu/Laravel reporting/auth/groups/roles/privacy/retention/API; later typed remote commands with expiry/replay/revocation/approval, never arbitrary shell execution.
-- ARM64 native tests, signing/licensing/dependency/release gates, branding/clean repo handoff and separately approved old-repo privacy.
+- Native IPC/spoof/network/cross-session/replay/flood/disposal/error and Windows x64/ARM64 integration evidence.
+- Policy startup/off-on/error/gap gates, exclusions, authenticated supervised launch, native lock recheck and positive lock confirmation.
+- User warning/countdown UX; full token/session reuse/multiple-user/unlock/disconnect/config/ACL/concurrency tests.
+- Diagnostics corruption/retention/power loss; transactional audit/outcome/crash ledger.
+- Interrupted install/removal, recovery/retry/upgrade/reparse/race hardening and helper ownership cleanup.
+- Profile inventory/guarded deletion/native retention/baseline reversal; owned maintenance/DST/missed-run/collision/warnings/reversal.
+- Ubuntu/Laravel reporting/auth/groups/roles/privacy/retention/API; typed commands with expiry/replay/revocation/approval, never arbitrary shell execution.
+- ARM64 Surface Pro device tests later; signing/licensing/dependencies/release gates; branding/clean repo handoff and separately approved old-repo privacy.
 
 ## Continuity
 
-[README](README.md), [idle architecture/current standalone guide](IDLE-LOCK.md), [integrated guide](SERVICE-INTEGRATION.md), [server](SERVER-PLAN.md), [branding](BRANDING.md). Integrated guide still documents the independently packaged service lifecycle; it is not the observer launch guide. Preserve date/path/owner/permissions/purpose/arguments/usage. Read actual source/patches, never SHA metadata as content. Public records omit operator identifiers/raw logs. No automatic deployment or silent authority/enforcement changes.
+README.md, IDLE-LOCK.md, SERVICE-INTEGRATION.md and SERVER-PLAN.md retain component/roadmap requirements; this checkpoint and AGENT-POLICY.md clarify newer evidence and IPC foundation boundaries. Preserve dates/path/owner/permissions/purpose/arguments/usage. Read actual source/patches, not SHA metadata as content. No public identifiers/raw operator logs or automatic deployment.
