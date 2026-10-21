@@ -1,7 +1,7 @@
-// Updated: 2026-10-15 12:13 America/Los_Angeles
+// Updated: 2026-10-21 11:16 America/Los_Angeles
 // Path: src/LockedSessionLogoff.Windows/AdminSettings.cs; Owner: maintainers
-// Permissions: public read/maintainer write; Purpose: protected settings and explicit live permit
-// Arguments: Save/Remove expected raw snapshot; Usage: elevated GUI, SYSTEM service reads
+// Permissions: public read/maintainer write; Purpose: protected settings with independent report-only idle intent
+// Arguments: Save/Remove expected raw; Usage: elevated GUI writes, SYSTEM host reads; absent idle fields default OFF
 using Microsoft.Win32;
 using System.Security.Principal;
 using System.Text.Json;
@@ -16,11 +16,15 @@ public sealed record AdminSettings
     public bool Debug { get; init; }
     public bool AllowLiveLogoff { get; init; } = false;
     public int LockedTimeoutSeconds { get; init; } = 3600;
+    public bool IdleObservationRequested { get; init; } = false;
+    public int IdleTimeoutSeconds { get; init; } = 300;
     public string[] ExcludedSids { get; init; } = [];
     public void Validate()
     {
         if (ApplicationId != "LockedSessionLogoff" || SchemaVersion != 1) throw new InvalidDataException("Unsupported application/schema");
-        if (LockedTimeoutSeconds < 5 || LockedTimeoutSeconds > 604800) throw new InvalidDataException("Timeout must be 5..604800 seconds");
+        if (LockedTimeoutSeconds < 5 || LockedTimeoutSeconds > 604800) throw new InvalidDataException("Locked timeout must be 5..604800 seconds");
+        if (IdleTimeoutSeconds < 5 || IdleTimeoutSeconds > 604800) throw new InvalidDataException("Idle timeout must be 5..604800 seconds");
+        if (IdleObservationRequested && (!DryRun || AllowLiveLogoff)) throw new InvalidDataException("Idle observation requires Dry-run checked and Allow LIVE unchecked; idle actions are not implemented");
         if (ExcludedSids is null || ExcludedSids.Length > 256) throw new InvalidDataException("Invalid exclusions");
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var sid in ExcludedSids)

@@ -1,30 +1,36 @@
-<!-- Updated: 2026-10-20 13:32 America/Los_Angeles | Path: /TASKS.md | Owner: maintainers | Permissions: public read/maintainer write | Purpose: hosted disabled IPC checkpoint and remaining integration gate | Arguments: none | Usage: separate source/CI/native/operator/device evidence -->
+<!-- Updated: 2026-10-21 11:16 America/Los_Angeles | Path: /TASKS.md | Owner: maintainers | Permissions: public read/maintainer write | Purpose: saved idle-control implementation and combined native test gate | Arguments: none | Usage: separate source/maintainer CI/native/operator/device evidence -->
 # Current implementation tracker
 
 ## Prior scoped evidence
 
-VALIDATION-0138c6c.md: exact PS5.1/package metadata, install/removal previews and real operations exit 0; 475 files/config/recovery preserved by preview, final owned-state absence and baseline restoration. VALIDATION-f6af81c.md: controlled live request, correlated target absence, original normal PS uninstall/restoration plus historical preview defect. VALIDATION-2aeffea.md: read-only observer/native layouts/manual-lock pause/unlock fresh timing/normal stop shown; no-auto-lock/input/no-repeat operator-confirmed; Ctrl+C PowerShell pipeline noise recorded. Prior SID/foundation records remain. Both service installations removed; observer stopped.
+VALIDATION-0138c6c.md records exact PS5.1/package metadata, preview preservation/475 matching files and actual uninstall/baseline restoration. VALIDATION-f6af81c.md records controlled live request, same-action target absence and normal restoration; historical preview failure is not retroactively passed. VALIDATION-2aeffea.md records standalone read-only observer checks and Ctrl+C shell noise, with operator-only timing confirmations distinguished. Earlier SID/foundation records remain. Service installations removed; observer stopped.
 
-## New hosting source, execution pending
+Maintainer explicitly reported all builds/checks for 7933adfde71c2b205e705eff9fec42090825dc92 green on 2026-10-20. Treat as maintainer CI confirmation, not independently inspected logs or successful native normal-user authentication.
 
-54810b6 foundation protocol/native peer checks are now connected to service lifecycle and normal-user client --service-policy/--service-observe. A new HostedIdlePolicy ALWAYS returns disabled (or read-failed), regardless of locked monitoring/live flags. Current SID exclusions still filter peer replies. No idle activation or lock/sign-out requests; no setting/schema/installer changes. Manual agent-tools included in integrated artifacts but not installed/auto-started. New pure hosted-policy safety tests alongside existing protocol/idle/action suites.
+## New source, execution pending
 
-CI statuses remain unverified: public check-runs fetch failed, not evidence of pass/fail. No claims native ACL/impersonation/normal-user exchange have run successfully. Existing install CI will reach SYSTEM pipe creation/start/stop; it is not an interactive client authentication test. Source/build/operator/device statuses must stay separate.
+- IdleObservationRequested default OFF and independent 300-second idle timeout in existing protected ConfigurationV1.
+- Separate GUI idle intent/timeout, shared SID exclusions, complete save preview and explicit locked-state versus idle effective-state labeling.
+- Report-only idle requires Dry-run ON / live permit OFF; no changes to valid old idle-OFF live-logoff behavior.
+- Independent idle gate: startup saved ON waits OFF/ON; config errors and long/backward service observation reset activation; policy refresh every two seconds and on query.
+- Effective idle policy events and existing authenticated client refresh/reset/no-stale fallback. No idle lock/sign-out RPC/actions, fabricated lock state, agent auto-start or supervision.
+- New pure idle-policy validation/gate tests and existing suites in integrated CI. No successful native client access claimed.
 
-## Next internal code gate, no laptop work yet
+## Immediate gate
 
-Approve hosting change; verify all CI. Then add independent default-off saved idle-observation policy, explicit administrator controls, startup/off-on/error/gap gates, native successful/negative connection tests and one combined flash-drive command sheet. Agent refresh/reset/no-stale-fallback code is present but needs device validation. Keep idle actions disabled throughout. Do not request another standalone observer or live-logoff round for each internal substep.
+Approve source and verify ALL new CI including dual-shell lifecycle. Then provide ONE two-console flash-drive sheet: elevated install/GUI and NORMAL-user agent, successful verified disabled query first, idle-only enable/threshold/reset/disable/shared exclusion/restart OFF-ON/connection loss, no automatic lock, export and uninstall/baseline checks. STOP on failed native handshake, return diagnostics rather than calling it a disabled pass. No repeat live logoff. No new laptop action until fresh CI passes.
 
 ## Remaining scope
 
-- Native peer/network/spoof/elevated/cross-session/process-logon reuse/flood/disposal/error/multiple-user integration.
-- Saved policy/admin controls and supervised launch/ownership cleanup; actual idle lock recheck and positive native confirmation; warning/countdown UX.
-- Full locked-action/config/ACL/concurrency adversarial tests, diagnostics retention/corruption/power loss and transactional outcome/crash ledger.
+- Native normal-user/negative/spoof/network/elevated/cross-session/process-logon reuse/flood/disposal/error/multiple-user evidence.
+- Short suspend/power events/secure desktop/RDP semantics beyond conservative long-gap resetting.
+- Authenticated supervised launch/ownership cleanup; real idle lock recheck and positive confirmation; warning/countdown UX.
+- Full locked action/config/ACL/concurrency adversarial tests and diagnostics corruption/retention/power loss/transactional outcome/crash ledger.
 - Interrupted install/removal, recovery/retry/upgrade/reparse/race hardening.
-- Profile inventory/guarded deletion/native retention/baseline reversal; owned maintenance/DST/missed-run/collision/warnings/reversal.
-- Ubuntu/Laravel reporting/auth/groups/roles/privacy/retention/API; later typed commands with expiry/replay/revocation/approval, never arbitrary shell.
-- ARM64 Surface Pro device evidence later; signing/licensing/dependencies/release gates; branding/clean handoff and separately approved old-repo privacy.
+- Profile inventory/guarded deletion/native retention/baseline reversal; maintenance/DST/missed-run/collision/warnings/reversal.
+- Ubuntu/Laravel reporting/auth/groups/roles/privacy/retention/API; typed commands with expiry/replay/revocation/approval, never arbitrary shell.
+- ARM64 Surface Pro device validation later; signing/licensing/dependencies/release gates, branding/clean handoff and separately approved old-repo privacy.
 
 ## Continuity
 
-AGENT-POLICY.md is the current hosting boundary; other README/IDLE-LOCK/SERVICE-INTEGRATION/SERVER-PLAN requirements remain where not superseded. Preserve date/path/owner/permissions/purpose/arguments/usage; read real source/patches, not SHA metadata as content. Never publish private raw operator logs/identifiers. No automatic workstation deployment or silent live authorization changes.
+AGENT-POLICY.md is current integrated idle guide; README/IDLE-LOCK/SERVICE-INTEGRATION/SERVER-PLAN retain other requirements where not superseded. Preserve dates/path/owner/permissions/purpose/arguments/usage. Read real source/patches, not SHA metadata as content. Omit private operator identifiers/raw logs. Public source writes install nothing on operator devices.

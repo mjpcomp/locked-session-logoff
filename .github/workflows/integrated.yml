@@ -1,7 +1,7 @@
-# Updated: 2026-10-20 13:32 America/Los_Angeles
+# Updated: 2026-10-21 11:16 America/Los_Angeles
 # Path: .github/workflows/integrated.yml; Owner: maintainers
-# Permissions: contents read; Purpose: hosted disabled policy compilation, client tools and dual-shell lifecycle
-# Arguments: none; Usage: disposable x64 install tests never enable monitoring/live
+# Permissions: contents read; Purpose: saved idle activation tests, client tools and dual-shell lifecycle
+# Arguments: none; Usage: disposable x64 installs never activate monitoring/live
 name: Integrated service test bundle
 on: [push, pull_request, workflow_dispatch]
 permissions:
@@ -30,12 +30,14 @@ jobs:
         run: dotnet run --project tests/LockedSessionLogoff.EligibilityTests -c Release
       - name: Diagnostics tests
         run: dotnet run --project tests/LockedSessionLogoff.DiagnosticsTests -c Release
-      - name: Action/outcome tests (fake backend only)
+      - name: Action/outcome tests (fake backend)
         run: dotnet run --project tests/LockedSessionLogoff.ActionTests -c Release
       - name: Agent protocol/policy tests
         run: dotnet run --project tests/LockedSessionLogoff.AgentPolicyTests -c Release
-      - name: Hosting policy remains disabled tests
+      - name: Legacy disabled hosting tests
         run: dotnet run --project tests/LockedSessionLogoff.HostedPolicyTests -c Release
+      - name: Saved idle activation/validation tests
+        run: dotnet run --project tests/LockedSessionLogoff.IdlePolicyTests -c Release
       - name: Idle timer tests
         run: dotnet run --project tests/LockedSessionLogoff.IdleTests -c Release
       - name: Publish service, GUI and manual agent tools

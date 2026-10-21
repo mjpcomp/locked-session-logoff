@@ -1,33 +1,45 @@
-<!-- Updated: 2026-10-20 13:32 America/Los_Angeles | Path: /AGENT-POLICY.md | Owner: maintainers | Permissions: public read/maintainer write | Purpose: hosting-stage read-only IPC boundary and integration status | Arguments: service-policy/service-observe/standalone observe | Usage: internal gate; not an idle activation release -->
-# Hosted read-only policy channel - idle remains disabled
+<!-- Updated: 2026-10-21 11:16 America/Los_Angeles | Path: /AGENT-POLICY.md | Owner: maintainers | Permissions: public read/maintainer write | Purpose: saved report-only idle settings and effective-policy guards | Arguments: GUI plus service-policy/service-observe | Usage: controlled x64 combined test after CI, no idle lock actions -->
+# Service-managed report-only idle observation
 
-## Exact status
+## Current source and evidence
 
-Foundation code is now wired into installed service OnStart/OnStop/disposal and normal-user agent query/observation modes. Host creates and retains one first-instance local pipe; exchanges are bounded, client failures logged at most once per minute, accept/disconnect faults close availability rather than returning trusted data. Stop cancels IO/disposes handle with bounded worker wait. Startup pipe-creation failure fails service startup and retains installer recovery state. No helper auto-launch or startup task. Client tools remain in extracted agent-tools folder, NOT installed into Program Files; installer ownership and original configuration schema unchanged.
+Saved idle intent/timeout and separate administrator GUI controls now feed an independent service IdleObservationGate. Source/build/native/device results for THIS increment remain pending. Maintainer explicitly reported all builds/checks green for previous hosting commit 7933adf; logs were not independently inspected. That is not native normal-user exchange evidence.
 
-Hosting-stage policy is HARD-DISABLED via HostedIdlePolicy. No setting, existing live permit or caller request can enable idle observation through this host. Existing exclusions are copied/applied server-side. 300 seconds is an inactive diagnostic default, not an active idle countdown. Read failures yield disabled ReadFailed policy. This is intentional until independent saved idle settings, administrator controls and activation gates follow. Do not represent this as completed policy-controlled idle locking. Existing locked-logoff behavior is unchanged and still explicitly opt-in; keep locked monitoring/live OFF during future IPC tests.
+IdleObservationRequested defaults false and IdleTimeoutSeconds defaults 300, including older saved JSON/installer-created configuration with absent fields. Both live in existing protected ConfigurationV1, preserving the existing baseline/restore ownership model; no extra registry values or schema upgrade mechanism. Do not mix older binaries that reject unknown fields with new saved JSON. First-install only; no overwrite upgrade.
 
-Build, foundation CI results, native peer authentication and device operation have NOT been independently verified here. Public API lookup of foundation check-runs failed; no green build claim. No laptop test is requested for this intermediate hosting commit. Follow-up saved policy controls and native negative/security tests precede one combined flash-drive test round.
+Idle observation is independent from MonitoringRequested/LockedTimeoutSeconds. To request idle observation, Dry-run MUST be checked and Allow LIVE unchecked; invalid combinations are rejected before save and by service reads. Shared SID exclusions affect both stages. Reply always requires DryRun true / ActionsEnabled false. Enabling idle observation authorizes local WouldLock output only, never locks, simulated lock state or logoff. Existing locked-logoff live behavior for valid idle-OFF configurations is unchanged.
 
-## Client modes (for later combined test)
+## Activation and failure rules
 
-Run NORMAL Windows PowerShell, not elevation, at extracted agent-tools folder with matching installed service build:
+Service observes configuration on startup, every two seconds and during authenticated queries, under a serialized policy lock. Saved idle ON at startup reports AwaitingDisableThenEnable until service observes idle OFF then ON. Config read/validation failure disarms to ReadFailed; recovery with idle still ON requires OFF/ON. Backward service monotonic time or refresh gap over ten seconds disarms; if current saved intent is OFF, that valid OFF observation can rearm a later ON. Missing configuration is disabled. Removing saved settings disables both requests; it is not uninstall/restoration.
+
+Normal native client queries still require current local-console unlocked logon identity. Per-client locked/disconnected/unknown/connection failures do not globally require admin OFF/ON: client resets its local timer, does not use stale data, and needs a fresh verified reply/window after recovery. Policy revision, timeout or server epoch changes reset client timing. Dedicated short suspend/power-notification semantics, secure desktop and RDP remain unvalidated; do not infer coverage from the long-gap guard.
+
+IdleObservationPolicy service events report effective enabled/mode/timeout/revision without account/SID data. GUI saved checkbox is intent, not activation proof; main verified status panel is explicitly LOCKED-LOGOFF state. Inspect idle policy events AND authenticated agent reply for effective idle state. Agent WouldLock remains local output, not a privileged report/control message to the service.
+
+## Combined laptop round (only after new CI passes)
+
+Use fresh integrated-test-win-x64 with matching package metadata. Keep locked monitoring OFF, Dry-run checked, Allow LIVE unchecked. No repeat live logoff. Service/admin install/removal still elevated; agent runs from extracted agent-tools in NORMAL PowerShell, never elevation. Client tools are not automatically installed/launched. No helper startup task or supervision yet.
+
+1. Clean install, verify initial disabled idle/locked intent and unchecked live permit.
+2. From normal shell query --service-policy before enabling: require a VERIFIED successful reply with Enabled false / DryRun true / ActionsEnabled false. If query fails, STOP and return error plus service events; do not treat failure as a disabled-policy pass. This is the first native normal-user exchange validation.
+3. Start --service-observe directly (no Out-Host). Enable only IDLE observation at 20 seconds in elevated GUI; wait for effective ConfiguredDryRun. Expect WouldLock without locking.
+4. Change idle threshold, verify fresh timing; disable, verify no candidates. Add intended user's SID to shared exclusions, reenable and verify ExcludedBySid/no candidate; remove exclusion and verify fresh eligibility.
+5. Restart service with saved idle ON; verify AwaitingDisableThenEnable/no candidate, then GUI idle OFF, wait for effective Disabled, idle ON to rearm.
+6. Test stopping service/connection unavailability resets client and does not fall back to standalone. Reconnect requires fresh verified policy/window; restart also requires OFF/ON. Elevated client rejection is distinct from successful normal-user query. Do not run privileged CI attack fixtures on laptop.
+7. Disable both intents, leave live unchecked, stop agent, export events/transcript and close GUI. Capture this installation's baseline, preview/remove and verify owned absence/restoration using current integrated guide. No manual file/manifest changes. A full two-console flash-drive sheet will be supplied once CI passes.
+
+Commands (not an automatic test script):
 
 ```powershell
 & .\LockedSessionLogoff.SessionAgent.exe --service-policy
 & .\LockedSessionLogoff.SessionAgent.exe --service-observe
 ```
 
-One-shot query returns only verified reply or nonzero error. Service observation re-queries every observation cycle, never falls back to standalone policy or stale cached authorization, resets timing on errors, disabled/excluded reply, local lock/unknown state, policy revision or service epoch changes. In THIS stage it must stay paused/Disabled or ExcludedBySid because host cannot enable it. Ctrl+C stops; use direct native command without Out-Host to avoid unnecessary pipeline cancellation stage. Existing standalone --observe --idle-seconds 20 remains a separate diagnostic and does not consult service policy/exclusions. No mode requests a lock/sign-out or writes configuration.
+## Unchanged security boundary / remaining validation
 
-## Authentication/protocol boundary
+Fixed local first-instance pipe, protected DACL/network deny/reject-remote, identification-only client SQOS, bounded strict 4096-byte JSON frames, expiring single-use challenge and receipt. Native token/PID/start/session/current WTS checks repeat; client checks kernel server PID against query-status-only running SCM service and process start. Authenticates user/logon, NOT helper executable or honesty of input. Local admin/SYSTEM trusted; no cryptographic binary or atomic race-free proof. No lock/logoff/config-write RPC.
 
-Fixed local pipe, protected DACL, first instance, no inheritance, reject-remote flag, network deny; interactive clients get individual data/synchronize rights, not create-instance. Identification-only client SQOS limits server impersonation. Bounded 4096-byte strict JSON frames, duplicate/unknown-field/root/depth checks, single-use expiring challenge, one policy query and receipt. No lock/logoff/config-write request kind.
+Pure new tests exercise settings/default/legacy JSON, independent gate restart/read error/gap/time bounds/revision/exclusion and action-disabled replies. They do not prove native ACL/impersonation/client access. Successful/negative native connection, spoofed namespace, remote/elevated/cross-session, replay/flood, cancellation/disposal, multiple users and ARM64 device cases remain gates. Existing lifecycle CI exercises SYSTEM pipe creation/start/stop only, not interactive normal-user authentication.
 
-Native server derives actual token SID/session/authentication LUID, matches kernel client PID/session/start generation and current WTS user token/local-console unlocked state, repeating checks around trusted policy evaluation. Provider executes as SYSTEM after impersonation reverts. Client checks kernel server PID against query-status-only SCM running service and process start before hello/after reply. Client claims never supply authority; authenticates user/logon, NOT helper binary or honesty of idle data. Local administrators/SYSTEM are within trust boundary; no cryptographic binary attestation or atomic race-free guarantee. No SID/token handles/usernames serialized in replies.
-
-## Validation still required
-
-Pure protocol and hosted-disabled policy tests do not exercise native peer checks. Existing installed CI lifecycle will execute pipe factory/host startup/stop but not a successful interactive normal-user exchange. Need normal-user access, spoofed namespace, remote/network/elevated/cross-session rejection, logon/process reuse, cancellation/disposal, malformed/flood clients, multiple users and ARM64 device tests. Single instance may be occupied until exchange timeout; no fairness/availability proof. Bounded diagnostics are not transactional audit.
-
-Independent default-off idle controls, policy startup/off-on/error/gap handling, supervised launch, native lock recheck/confirmation and warning/countdown remain pending. Follow TASKS.md, IDLE-LOCK.md and prior scoped validation records.
+No actual idle enforcement, countdown/warning UX, supervised launch, profile/maintenance/server features yet. Native lock recheck/confirmation and full ownership/recovery/upgrade/adversarial release gates remain. Bounded retained diagnostics are not a transactional/tamper-evident audit ledger. Never publish raw operator identifiers/transcripts.
